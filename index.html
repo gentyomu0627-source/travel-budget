@@ -226,6 +226,12 @@
 
   <div class="section-title">
     <h2>支出履歴</h2>
+    <select id="sortSelect" style="border:none; background:none; color:var(--primary); font-size:13px; font-weight:600; cursor:pointer; padding:4px 6px; font-family:inherit; outline:none;">
+      <option value="date-desc">日付: 新しい順</option>
+      <option value="date-asc">日付: 古い順</option>
+      <option value="amount-desc">金額: 高い順</option>
+      <option value="amount-asc">金額: 低い順</option>
+    </select>
   </div>
   <div class="list" id="expenses"></div>
 </div>
@@ -501,7 +507,15 @@ function render() {
   if (data.expenses.length === 0) {
     expEl.innerHTML = '<div class="empty">「+」ボタンから支出を追加しましょう</div>';
   } else {
-    const sorted = [...data.expenses].sort((a,b) => (b.date||'').localeCompare(a.date||'') || b.createdAt - a.createdAt);
+    const sortMode = localStorage.getItem('tb_sort') || 'date-desc';
+    const sorted = [...data.expenses].sort((a,b) => {
+      switch (sortMode) {
+        case 'date-asc':   return (a.date||'').localeCompare(b.date||'') || a.createdAt - b.createdAt;
+        case 'amount-desc':return (+b.amount||0) - (+a.amount||0);
+        case 'amount-asc': return (+a.amount||0) - (+b.amount||0);
+        default:           return (b.date||'').localeCompare(a.date||'') || b.createdAt - a.createdAt;
+      }
+    });
     expEl.innerHTML = sorted.map(e => {
       const cat = data.categories.find(c => c.id === e.categoryId) || { emoji: '💸', name: '未分類', color: '#888' };
       return `
@@ -750,6 +764,13 @@ function toast(msg) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => t.classList.remove('show'), 2000);
 }
+
+// Sort mode for expenses
+(() => {
+  const sel = document.getElementById('sortSelect');
+  sel.value = localStorage.getItem('tb_sort') || 'date-desc';
+  sel.onchange = () => { localStorage.setItem('tb_sort', sel.value); render(); };
+})();
 
 render();
 
