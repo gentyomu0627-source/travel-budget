@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>旅行予算プランナー</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --text: #1a1d21;
+    --muted: #8a929c;
+    --border: #eceff3;
+    --primary: #4a7dff;
+    --primary-soft: #eaf0ff;
+    --danger: #ff5a5f;
+    --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased;
+  }
+  .app { max-width: 720px; margin: 0 auto; padding: 16px 16px 96px; }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 4px 20px;
+  }
+  header h1 { font-size: 20px; margin: 0; letter-spacing: .02em; }
+  .trip-name {
+    font-size: 13px; color: var(--muted); margin-top: 2px;
+    cursor: pointer; border: none; background: none; padding: 0; font-family: inherit;
+  }
+  .trip-name:hover { color: var(--primary); }
+  .icon-btn {
+    border: none; background: var(--card); color: var(--text);
+    width: 40px; height: 40px; border-radius: 12px;
+    box-shadow: var(--shadow); cursor: pointer; font-size: 18px;
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-left: 8px;
+  }
+  .icon-btn:hover { background: var(--primary-soft); color: var(--primary); }
+
+  .summary {
+    background: linear-gradient(135deg, #4a7dff 0%, #6c5ce7 100%);
+    color: #fff; border-radius: 18px; padding: 20px;
+    box-shadow: 0 6px 20px rgba(74,125,255,.25);
+  }
+  .summary .label { font-size: 12px; opacity: .85; }
+  .summary .amount { font-size: 30px; font-weight: 700; margin: 4px 0 14px; letter-spacing: -.02em; }
+  .summary-row { display: flex; gap: 12px; }
+  .summary-row .cell { flex: 1; background: rgba(255,255,255,.14); border-radius: 12px; padding: 10px 12px; }
+  .summary-row .cell .k { font-size: 11px; opacity: .85; }
+  .summary-row .cell .v { font-size: 16px; font-weight: 600; margin-top: 2px; }
+  .progress {
+    margin-top: 14px; height: 6px; background: rgba(255,255,255,.25);
+    border-radius: 99px; overflow: hidden;
+  }
+  .progress > div { height: 100%; background: #fff; border-radius: 99px; transition: width .3s; }
+
+  .section-title {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 4px 10px;
+  }
+  .section-title h2 { font-size: 14px; margin: 0; color: var(--muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .section-title button {
+    border: none; background: none; color: var(--primary); font-size: 13px; cursor: pointer; font-weight: 600;
+  }
+
+  .categories { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .cat-card {
+    background: var(--card); border-radius: 14px; padding: 12px;
+    box-shadow: var(--shadow); cursor: pointer; position: relative;
+    transition: transform .12s;
+  }
+  .cat-card:hover { transform: translateY(-1px); }
+  .cat-card .top { display: flex; justify-content: space-between; align-items: center; }
+  .cat-card .emoji { font-size: 22px; }
+  .cat-card .menu {
+    border: none; background: transparent; color: var(--muted); font-size: 16px;
+    cursor: pointer; padding: 2px 6px; border-radius: 6px;
+  }
+  .cat-card .menu:hover { background: var(--border); color: var(--text); }
+  .cat-card .name { font-size: 13px; font-weight: 600; margin-top: 8px; }
+  .cat-card .spent { font-size: 15px; font-weight: 700; margin-top: 4px; }
+  .cat-card .budget { font-size: 11px; color: var(--muted); }
+  .cat-card .bar { height: 4px; background: var(--border); border-radius: 99px; margin-top: 8px; overflow: hidden; }
+  .cat-card .bar > div { height: 100%; border-radius: 99px; transition: width .3s; }
+
+  .list { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .list .row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer;
+  }
+  .list .row:last-child { border-bottom: none; }
+  .list .row:hover { background: #fafbfc; }
+  .list .row .emo { font-size: 20px; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; background: var(--primary-soft); border-radius: 10px; }
+  .list .row .info { flex: 1; min-width: 0; }
+  .list .row .info .t { font-size: 14px; font-weight: 600; }
+  .list .row .info .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .list .row .amt { font-size: 15px; font-weight: 700; }
+  .list .row .del {
+    border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; padding: 4px 8px;
+  }
+  .list .row .del:hover { color: var(--danger); }
+  .empty { padding: 28px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  .fab {
+    position: fixed; right: max(16px, calc((100vw - 720px)/2 + 16px)); bottom: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--primary); color: #fff; border: none;
+    font-size: 28px; box-shadow: 0 8px 20px rgba(74,125,255,.45);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .fab:hover { background: #3a6cf0; }
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(16,24,40,.45);
+    display: none; align-items: flex-end; justify-content: center; z-index: 50;
+  }
+  .overlay.show { display: flex; animation: fade .15s ease-out; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .sheet {
+    background: var(--card); width: 100%; max-width: 520px;
+    border-radius: 18px 18px 0 0; padding: 20px 20px 24px;
+    max-height: 88vh; overflow-y: auto;
+    animation: slide .2s ease-out;
+  }
+  @keyframes slide { from { transform: translateY(20px); } to { transform: translateY(0); } }
+  @media (min-width: 600px) {
+    .overlay { align-items: center; }
+    .sheet { border-radius: 18px; }
+  }
+  .sheet h3 { margin: 0 0 16px; font-size: 17px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: 10px; font-size: 15px; background: var(--bg); font-family: inherit;
+    color: var(--text); outline: none; transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--primary); background: #fff; }
+  .row-2 { display: flex; gap: 10px; }
+  .row-2 > * { flex: 1; }
+
+  .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .emoji-grid button {
+    border: 1px solid transparent; background: var(--bg); font-size: 20px;
+    padding: 8px 0; border-radius: 8px; cursor: pointer;
+  }
+  .emoji-grid button.active { border-color: var(--primary); background: var(--primary-soft); }
+  .color-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .color-grid button {
+    height: 32px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;
+  }
+  .color-grid button.active { border-color: var(--text); transform: scale(1.08); }
+
+  .actions { display: flex; gap: 10px; margin-top: 16px; }
+  .btn {
+    flex: 1; padding: 13px; border-radius: 12px; border: none;
+    font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .btn.primary { background: var(--primary); color: #fff; }
+  .btn.primary:hover { background: #3a6cf0; }
+  .btn.ghost { background: var(--bg); color: var(--text); }
+  .btn.ghost:hover { background: var(--border); }
+  .btn.danger { background: #fff1f1; color: var(--danger); flex: 0 0 auto; padding: 13px 18px; }
+
+  .share-options { display: flex; flex-direction: column; gap: 8px; }
+  .share-opt {
+    display: flex; align-items: center; gap: 12px; padding: 14px;
+    background: var(--bg); border-radius: 12px; border: none; text-align: left;
+    cursor: pointer; font-family: inherit; font-size: 14px; color: var(--text); width: 100%;
+  }
+  .share-opt:hover { background: var(--primary-soft); }
+  .share-opt .ic { font-size: 22px; }
+  .share-opt .desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .toast {
+    position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: #fff; padding: 10px 16px; border-radius: 99px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+
+  .tabs { display: flex; gap: 6px; background: var(--bg); padding: 4px; border-radius: 10px; margin-bottom: 14px; }
+  .tabs button {
+    flex: 1; padding: 8px; border: none; background: transparent; border-radius: 8px;
+    font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; font-family: inherit;
+  }
+  .tabs button.active { background: #fff; color: var(--text); box-shadow: var(--shadow); }
+  textarea { resize: vertical; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1 id="tripName" style="cursor:pointer">旅行名を設定</h1>
+    </div>
+    <div>
+      <button class="icon-btn" id="btnShare" title="共有">↗</button>
+      <button class="icon-btn" id="btnSettings" title="設定">⚙</button>
+    </div>
+  </header>
+
+  <section class="summary">
+    <div class="label">残り予算</div>
+    <div class="amount" id="remaining">¥0</div>
+    <div class="summary-row">
+      <div class="cell"><div class="k">予算合計</div><div class="v" id="totalBudget">¥0</div></div>
+      <div class="cell"><div class="k">支出</div><div class="v" id="totalSpent">¥0</div></div>
+      <div class="cell"><div class="k">人数</div><div class="v" id="perPerson">1人</div></div>
+    </div>
+    <div class="progress"><div id="progressBar" style="width:0%"></div></div>
+  </section>
+
+  <div class="section-title">
+    <h2>カテゴリー</h2>
+    <button id="btnAddCat">+ 追加</button>
+  </div>
+  <div class="categories" id="categories"></div>
+
+  <div class="section-title">
+    <h2>支出履歴</h2>
+  </div>
+  <div class="list" id="expenses"></div>
+</div>
+
+<button class="fab" id="fab" title="支出を追加">+</button>
+
+<div class="overlay" id="expenseModal">
+  <div class="sheet">
+    <h3 id="expenseTitle">支出を追加</h3>
+    <div class="field"><label>内容</label><input type="text" id="expName" placeholder="例: 夕食、ホテル代" /></div>
+    <div class="row-2">
+      <div class="field"><label>金額</label><input type="number" id="expAmount" placeholder="0" inputmode="numeric" /></div>
+      <div class="field"><label>日付</label><input type="date" id="expDate" /></div>
+    </div>
+    <div class="field"><label>カテゴリー</label><select id="expCategory"></select></div>
+    <div class="field"><label>メモ (任意)</label><input type="text" id="expNote" /></div>
+    <div class="actions">
+      <button class="btn ghost" data-close>キャンセル</button>
+      <button class="btn primary" id="expSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="catModal">
+  <div class="sheet">
+    <h3 id="catTitle">カテゴリーを追加</h3>
+    <div class="field"><label>名前</label><input type="text" id="catName" placeholder="例: 食費" /></div>
+    <div class="field"><label>アイコン</label><div class="emoji-grid" id="emojiGrid"></div></div>
+    <div class="field"><label>カラー</label><div class="color-grid" id="colorGrid"></div></div>
+    <div class="actions">
+      <button class="btn danger" id="catDelete" style="display:none">削除</button>
+      <button class="btn ghost" data-close>キャンセル</button>
+      <button class="btn primary" id="catSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="settingsModal">
+  <div class="sheet">
+    <h3>設定</h3>
+    <div class="field"><label>旅行名</label><input type="text" id="setTripName" /></div>
+    <div class="field"><label>予算合計</label><input type="number" id="setBudget" placeholder="0" inputmode="numeric" /></div>
+    <div class="row-2">
+      <div class="field"><label>人数</label><input type="number" id="setPeople" min="1" /></div>
+      <div class="field"><label>通貨</label>
+        <select id="setCurrency">
+          <option value="¥">¥ (円)</option>
+          <option value="$">$ (ドル)</option>
+          <option value="€">€ (ユーロ)</option>
+          <option value="₩">₩ (ウォン)</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn danger" id="resetAll">リセット</button>
+      <button class="btn ghost" data-close>閉じる</button>
+      <button class="btn primary" id="setSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="shareModal">
+  <div class="sheet">
+    <h3>家族と共有</h3>
+    <div class="tabs">
+      <button class="active" data-tab="export">共有する</button>
+      <button data-tab="import">受け取る</button>
+    </div>
+    <div id="tabExport">
+      <div class="share-options">
+        <button class="share-opt" id="shareLink"><span class="ic">🔗</span><div><div>共有リンクをコピー</div><div class="desc">URLにデータを埋め込み</div></div></button>
+        <button class="share-opt" id="shareFile"><span class="ic">📄</span><div><div>ファイルとして保存</div><div class="desc">JSONファイルをダウンロード</div></div></button>
+        <button class="share-opt" id="shareCopy"><span class="ic">📋</span><div><div>データをコピー</div><div class="desc">テキストとしてコピー</div></div></button>
+      </div>
+    </div>
+    <div id="tabImport" style="display:none">
+      <div class="field">
+        <label>データを貼り付け</label>
+        <textarea id="importText" rows="6" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:10px; font-family:monospace; font-size:12px;"></textarea>
+      </div>
+      <div class="actions" style="margin-bottom:10px">
+        <button class="btn ghost" id="pickFile">📁 ファイルから読込</button>
+        <input type="file" id="importFile" accept=".json,application/json" style="display:none" />
+      </div>
+      <div class="actions">
+        <button class="btn ghost" data-close>キャンセル</button>
+        <button class="btn primary" id="importSave">読み込む</button>
+      </div>
+    </div>
+    <div class="actions" id="shareClose" style="margin-top:14px">
+      <button class="btn ghost" data-close>閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="copyFallback">
+  <div class="sheet">
+    <h3>コピー</h3>
+    <div class="field">
+      <label id="cfLabel">長押し/Cmd+Cでコピー</label>
+      <textarea id="cfText" rows="5" readonly style="width:100%; padding:12px; border:1px solid var(--border); border-radius:10px; font-family:monospace; font-size:12px;"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" data-close>閉じる</button>
+      <button class="btn primary" id="cfCopyBtn">コピー</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_EMOJIS = ['✈️','🏨','🍱','🚗','🎫','🛍️','☕','🍺','🚆','🚕','🛳️','🎢','📷','💊','🎁','💳','🏖️','⛩️','🗺️','🎒','💴','📱','🍜','🍣'];
+const COLORS = ['#4a7dff','#22c55e','#f59e0b','#ef4444','#a855f7','#ec4899','#06b6d4','#f97316'];
+
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const defaultData = () => ({
+  tripName: '',
+  people: 1,
+  currency: '¥',
+  totalBudget: 0,
+  categories: [
+    { id: newId(), name: '交通費', emoji: '✈️', color: '#4a7dff' },
+    { id: newId(), name: '宿泊費', emoji: '🏨', color: '#22c55e' },
+    { id: newId(), name: '食費', emoji: '🍱', color: '#f59e0b' },
+    { id: newId(), name: '観光・娯楽', emoji: '🎫', color: '#a855f7' },
+    { id: newId(), name: 'お土産', emoji: '🛍️', color: '#ec4899' },
+  ],
+  expenses: []
+});
+
+let data = load();
+let state = { editingExpense: null, editingCategory: null };
+
+function load() {
+  try {
+    if (location.hash.startsWith('#data=')) {
+      const d = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(6)))));
+      history.replaceState(null, '', location.pathname);
+      if (confirm('共有された旅行プランを読み込みますか? (現在のデータは上書きされます)')) {
+        localStorage.setItem('travelBudget', JSON.stringify(d));
+        return d;
+      }
+    }
+    const s = localStorage.getItem('travelBudget');
+    if (s) {
+      const d = JSON.parse(s);
+      const def = defaultData();
+      return { ...def, ...d, categories: d.categories || def.categories, expenses: d.expenses || [] };
+    }
+  } catch(e) { console.warn(e); }
+  return defaultData();
+}
+function save() {
+  localStorage.setItem('travelBudget', JSON.stringify(data));
+  render();
+}
+function fmt(n) { return data.currency + Number(n || 0).toLocaleString('ja-JP'); }
+function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function formatDate(d) {
+  if (!d) return '';
+  const [, m, day] = d.split('-');
+  return `${+m}月${+day}日`;
+}
+
+function render() {
+  document.getElementById('tripName').textContent = data.tripName ? data.tripName : '旅行名を設定';
+  const totalBudget = +data.totalBudget || 0;
+  const totalSpent = data.expenses.reduce((s,e) => s + (+e.amount||0), 0);
+  const remaining = totalBudget - totalSpent;
+
+  document.getElementById('totalBudget').textContent = fmt(totalBudget);
+  document.getElementById('totalSpent').textContent = fmt(totalSpent);
+  document.getElementById('remaining').textContent = fmt(remaining);
+  document.getElementById('perPerson').textContent = data.people + '人';
+  const pct = totalBudget ? Math.min(100, (totalSpent/totalBudget)*100) : 0;
+  const pb = document.getElementById('progressBar');
+  pb.style.width = pct + '%';
+  pb.style.background = pct > 90 ? '#ffb4b4' : '#fff';
+
+  const catEl = document.getElementById('categories');
+  catEl.innerHTML = data.categories.map(c => {
+    const spent = data.expenses.filter(e => e.categoryId === c.id).reduce((s,e) => s + (+e.amount||0), 0);
+    const p = totalSpent ? Math.min(100, (spent/totalSpent)*100) : 0;
+    return `
+      <div class="cat-card" data-cat="${c.id}">
+        <div class="top">
+          <span class="emoji">${c.emoji}</span>
+          <button class="menu" data-edit-cat="${c.id}">⋯</button>
+        </div>
+        <div class="name">${escapeHtml(c.name)}</div>
+        <div class="spent">${fmt(spent)}</div>
+        <div class="budget">全体の ${Math.round(p)}%</div>
+        <div class="bar"><div style="width:${p}%; background:${c.color}"></div></div>
+      </div>`;
+  }).join('');
+  catEl.querySelectorAll('[data-edit-cat]').forEach(b => {
+    b.onclick = (e) => { e.stopPropagation(); openCatModal(b.dataset.editCat); };
+  });
+  catEl.querySelectorAll('[data-cat]').forEach(c => {
+    c.onclick = () => openExpenseModal(null, c.dataset.cat);
+  });
+
+  const expEl = document.getElementById('expenses');
+  if (data.expenses.length === 0) {
+    expEl.innerHTML = '<div class="empty">「+」ボタンから支出を追加しましょう</div>';
+  } else {
+    const sorted = [...data.expenses].sort((a,b) => (b.date||'').localeCompare(a.date||'') || b.createdAt - a.createdAt);
+    expEl.innerHTML = sorted.map(e => {
+      const cat = data.categories.find(c => c.id === e.categoryId) || { emoji: '💸', name: '未分類', color: '#888' };
+      return `
+        <div class="row" data-exp="${e.id}">
+          <span class="emo" style="background:${cat.color}22">${cat.emoji}</span>
+          <div class="info">
+            <div class="t">${escapeHtml(e.name||'(名称なし)')}</div>
+            <div class="s">${escapeHtml(cat.name)} · ${formatDate(e.date)}${e.note ? ' · '+escapeHtml(e.note) : ''}</div>
+          </div>
+          <div class="amt">${fmt(e.amount)}</div>
+          <button class="del" data-del-exp="${e.id}">×</button>
+        </div>`;
+    }).join('');
+    expEl.querySelectorAll('[data-exp]').forEach(r => {
+      r.onclick = (ev) => { if (ev.target.closest('[data-del-exp]')) return; openExpenseModal(r.dataset.exp); };
+    });
+    expEl.querySelectorAll('[data-del-exp]').forEach(b => {
+      b.onclick = (ev) => {
+        ev.stopPropagation();
+        if (confirm('この支出を削除しますか?')) {
+          data.expenses = data.expenses.filter(x => x.id !== b.dataset.delExp);
+          save();
+        }
+      };
+    });
+  }
+}
+
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('[data-close]').forEach(b => {
+  b.onclick = () => b.closest('.overlay').classList.remove('show');
+});
+document.querySelectorAll('.overlay').forEach(o => {
+  o.onclick = (e) => { if (e.target === o) o.classList.remove('show'); };
+});
+
+function openExpenseModal(expId, presetCat) {
+  state.editingExpense = expId;
+  const exp = expId ? data.expenses.find(e => e.id === expId) : null;
+  document.getElementById('expenseTitle').textContent = exp ? '支出を編集' : '支出を追加';
+  document.getElementById('expName').value = exp?.name || '';
+  document.getElementById('expAmount').value = exp?.amount || '';
+  document.getElementById('expDate').value = exp?.date || new Date().toISOString().slice(0,10);
+  document.getElementById('expNote').value = exp?.note || '';
+  const catSel = document.getElementById('expCategory');
+  catSel.innerHTML = data.categories.map(c => `<option value="${c.id}">${c.emoji} ${escapeHtml(c.name)}</option>`).join('');
+  catSel.value = exp?.categoryId || presetCat || data.categories[0]?.id || '';
+  openModal('expenseModal');
+  setTimeout(() => document.getElementById('expName').focus(), 100);
+}
+document.getElementById('fab').onclick = () => {
+  if (data.categories.length === 0) { toast('先にカテゴリーを追加してください'); return; }
+  openExpenseModal();
+};
+document.getElementById('expSave').onclick = () => {
+  const name = document.getElementById('expName').value.trim();
+  const amount = +document.getElementById('expAmount').value || 0;
+  const date = document.getElementById('expDate').value;
+  const categoryId = document.getElementById('expCategory').value;
+  const note = document.getElementById('expNote').value.trim();
+  if (!name || !amount) { toast('内容と金額を入力してください'); return; }
+  if (state.editingExpense) {
+    const e = data.expenses.find(x => x.id === state.editingExpense);
+    Object.assign(e, { name, amount, date, categoryId, note });
+  } else {
+    data.expenses.push({ id: newId(), name, amount, date, categoryId, note, createdAt: Date.now() });
+  }
+  closeModal('expenseModal');
+  save();
+};
+
+function openCatModal(catId) {
+  state.editingCategory = catId;
+  const cat = catId ? data.categories.find(c => c.id === catId) : null;
+  document.getElementById('catTitle').textContent = cat ? 'カテゴリーを編集' : 'カテゴリーを追加';
+  document.getElementById('catName').value = cat?.name || '';
+  document.getElementById('catDelete').style.display = cat ? 'block' : 'none';
+
+  const eg = document.getElementById('emojiGrid');
+  const selEmo = cat?.emoji || DEFAULT_EMOJIS[0];
+  eg.innerHTML = DEFAULT_EMOJIS.map(e => `<button type="button" data-emo="${e}" class="${e===selEmo?'active':''}">${e}</button>`).join('');
+  eg.querySelectorAll('button').forEach(b => b.onclick = () => {
+    eg.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  });
+
+  const cg = document.getElementById('colorGrid');
+  const selCol = cat?.color || COLORS[0];
+  cg.innerHTML = COLORS.map(c => `<button type="button" data-color="${c}" class="${c===selCol?'active':''}" style="background:${c}"></button>`).join('');
+  cg.querySelectorAll('button').forEach(b => b.onclick = () => {
+    cg.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  });
+  openModal('catModal');
+}
+document.getElementById('btnAddCat').onclick = () => openCatModal();
+document.getElementById('catSave').onclick = () => {
+  const name = document.getElementById('catName').value.trim();
+  const emoji = document.querySelector('#emojiGrid button.active')?.dataset.emo || DEFAULT_EMOJIS[0];
+  const color = document.querySelector('#colorGrid button.active')?.dataset.color || COLORS[0];
+  if (!name) { toast('カテゴリー名を入力してください'); return; }
+  if (state.editingCategory) {
+    const c = data.categories.find(x => x.id === state.editingCategory);
+    Object.assign(c, { name, emoji, color });
+  } else {
+    data.categories.push({ id: newId(), name, emoji, color });
+  }
+  closeModal('catModal');
+  save();
+};
+document.getElementById('catDelete').onclick = () => {
+  if (!state.editingCategory) return;
+  const used = data.expenses.some(e => e.categoryId === state.editingCategory);
+  const msg = used ? 'このカテゴリーには支出履歴があります。削除すると「未分類」になります。続行しますか?' : 'このカテゴリーを削除しますか?';
+  if (!confirm(msg)) return;
+  data.categories = data.categories.filter(c => c.id !== state.editingCategory);
+  data.expenses.forEach(e => { if (e.categoryId === state.editingCategory) e.categoryId = null; });
+  closeModal('catModal');
+  save();
+};
+
+function openSettings() {
+  document.getElementById('setTripName').value = data.tripName;
+  document.getElementById('setBudget').value = data.totalBudget || '';
+  document.getElementById('setPeople').value = data.people;
+  document.getElementById('setCurrency').value = data.currency;
+  openModal('settingsModal');
+}
+document.getElementById('tripName').onclick = openSettings;
+document.getElementById('btnSettings').onclick = openSettings;
+document.getElementById('setSave').onclick = () => {
+  data.tripName = document.getElementById('setTripName').value.trim();
+  data.totalBudget = +document.getElementById('setBudget').value || 0;
+  data.people = Math.max(1, +document.getElementById('setPeople').value || 1);
+  data.currency = document.getElementById('setCurrency').value;
+  closeModal('settingsModal');
+  save();
+};
+document.getElementById('resetAll').onclick = () => {
+  if (!confirm('すべてのデータを削除して初期状態に戻しますか?')) return;
+  data = defaultData();
+  closeModal('settingsModal');
+  save();
+};
+
+function switchTab(t) {
+  document.querySelectorAll('#shareModal .tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  document.getElementById('tabExport').style.display = t === 'export' ? 'block' : 'none';
+  document.getElementById('tabImport').style.display = t === 'import' ? 'block' : 'none';
+  document.getElementById('shareClose').style.display = t === 'export' ? 'flex' : 'none';
+}
+document.getElementById('btnShare').onclick = () => { switchTab('export'); openModal('shareModal'); };
+document.querySelectorAll('#shareModal .tabs button').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.left = '0';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (ok) return true;
+  } catch {}
+  return false;
+}
+function showCopyFallback(text, label) {
+  const ov = document.getElementById('copyFallback');
+  document.getElementById('cfLabel').textContent = label + ' (長押し/Cmd+Cでコピー)';
+  const ta = document.getElementById('cfText');
+  ta.value = text;
+  ov.classList.add('show');
+  setTimeout(() => { ta.focus(); ta.select(); }, 50);
+}
+document.getElementById('cfCopyBtn').onclick = async () => {
+  const ta = document.getElementById('cfText');
+  ta.focus(); ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch {}
+  if (!ok) {
+    try { await navigator.clipboard.writeText(ta.value); ok = true; } catch {}
+  }
+  if (ok) { closeModal('copyFallback'); toast('コピーしました'); }
+  else { toast('長押ししてコピーしてください'); }
+};
+document.getElementById('shareLink').onclick = async () => {
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  const url = location.origin + location.pathname + '#data=' + encoded;
+  if (await copyText(url)) toast('共有リンクをコピーしました');
+  else showCopyFallback(url, '共有リンク');
+};
+document.getElementById('shareFile').onclick = () => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (data.tripName || 'travel-budget') + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('ファイルを保存しました');
+};
+document.getElementById('shareCopy').onclick = async () => {
+  const txt = JSON.stringify(data, null, 2);
+  if (await copyText(txt)) toast('データをコピーしました');
+  else showCopyFallback(txt, 'データ');
+};
+document.getElementById('pickFile').onclick = () => document.getElementById('importFile').click();
+document.getElementById('importFile').onchange = (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { document.getElementById('importText').value = r.result; };
+  r.readAsText(f);
+};
+document.getElementById('importSave').onclick = () => {
+  const txt = document.getElementById('importText').value.trim();
+  if (!txt) { toast('データが空です'); return; }
+  try {
+    const d = JSON.parse(txt);
+    if (!Array.isArray(d.categories) || !Array.isArray(d.expenses)) throw new Error('形式が不正');
+    if (!confirm('現在のデータを上書きしますか?')) return;
+    data = d;
+    closeModal('shareModal');
+    save();
+    toast('データを読み込みました');
+  } catch { toast('データの読み込みに失敗しました'); }
+};
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+render();
+</script>
+</body>
+</html>
