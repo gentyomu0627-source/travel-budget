@@ -201,6 +201,7 @@
       <h1 id="tripName" style="cursor:pointer">旅行名を設定</h1>
     </div>
     <div>
+      <span id="syncBadge" style="display:none; font-size:11px; color:var(--success, #22c55e); background:#dcfce7; padding:4px 8px; border-radius:99px; margin-right:4px; vertical-align:middle; font-weight:600;">🔄 同期中</span>
       <button class="icon-btn" id="btnShare" title="共有">↗</button>
       <button class="icon-btn" id="btnSettings" title="設定">⚙</button>
     </div>
@@ -290,8 +291,9 @@
   <div class="sheet">
     <h3>家族と共有</h3>
     <div class="tabs">
-      <button class="active" data-tab="export">共有する</button>
-      <button data-tab="import">受け取る</button>
+      <button class="active" data-tab="export">共有</button>
+      <button data-tab="import">受信</button>
+      <button data-tab="sync">🔄 同期</button>
     </div>
     <div id="tabExport">
       <div class="share-options">
@@ -314,8 +316,75 @@
         <button class="btn primary" id="importSave">読み込む</button>
       </div>
     </div>
+    <div id="tabSync" style="display:none">
+      <div id="syncSetup">
+        <p style="font-size:13px; color:var(--muted); margin:0 0 12px; line-height:1.6;">
+          Firebaseで家族と<b style="color:var(--text)">リアルタイム同期</b>します。誰かの編集が全員のアプリに即反映。
+        </p>
+        <details style="margin-bottom:14px; background:var(--bg); border-radius:10px; padding:10px 12px;">
+          <summary style="cursor:pointer; font-size:13px; font-weight:600;">📖 Firebase設定の取得手順 (初回のみ)</summary>
+          <ol style="font-size:12px; line-height:1.8; margin:10px 0 0; padding-left:20px; color:var(--muted);">
+            <li><a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a>で「プロジェクトを追加」</li>
+            <li>プロジェクト作成後、左メニュー「<b>Firestore Database</b>」→「データベースの作成」→ テストモードで開始</li>
+            <li>画面上部「⚙ プロジェクト設定」→ 下部「マイアプリ」で Web(&lt;/&gt;)アイコン → アプリ名入力 → 登録</li>
+            <li>表示される <code>firebaseConfig = { ... }</code> の <b>{ }の中身</b> をコピーして下に貼り付け</li>
+          </ol>
+        </details>
+        <div class="field">
+          <label>Firebase設定 (firebaseConfig の中身)</label>
+          <textarea id="fbConfig" rows="6" placeholder='{
+  "apiKey": "...",
+  "authDomain": "...",
+  "projectId": "...",
+  ...
+}' style="width:100%; padding:12px; border:1px solid var(--border); border-radius:10px; font-family:monospace; font-size:12px;"></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn ghost" data-close>キャンセル</button>
+          <button class="btn primary" id="fbConnect">接続する</button>
+        </div>
+      </div>
+
+      <div id="syncRoom" style="display:none">
+        <div style="text-align:center; padding:20px; background:var(--primary-soft); border-radius:14px; margin-bottom:14px;">
+          <div style="font-size:11px; color:var(--muted);">ルームコード</div>
+          <div id="roomCodeDisplay" style="font-size:26px; font-weight:700; letter-spacing:.12em; margin:6px 0; font-family:'SF Mono',monospace; color:var(--primary);">XXXX-XXXX</div>
+          <div id="syncStatus" style="font-size:12px; color:var(--muted);">接続中...</div>
+        </div>
+        <p style="font-size:12px; color:var(--muted); margin:0 0 12px; line-height:1.6; text-align:center;">
+          家族にこのコードを伝えて「既存ルームに参加」から入力してもらうと、リアルタイムで同期されます。
+        </p>
+        <div class="actions">
+          <button class="btn ghost" id="copyRoomCode">📋 コピー</button>
+          <button class="btn ghost" id="showRoomQR">📱 QR表示</button>
+        </div>
+        <details style="margin-top:14px; background:var(--bg); border-radius:10px; padding:10px 12px;">
+          <summary style="cursor:pointer; font-size:13px; font-weight:600;">既存ルームに参加</summary>
+          <div class="field" style="margin-top:10px;">
+            <input type="text" id="joinCodeInput" placeholder="XXXX-XXXX" style="text-transform:uppercase; font-family:'SF Mono',monospace; letter-spacing:.1em; text-align:center;" maxlength="9" />
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="joinRoomBtn">参加する</button>
+          </div>
+        </details>
+        <div class="actions" style="margin-top:14px;">
+          <button class="btn ghost" id="syncDisconnect" style="font-size:12px;">切断してFirebase設定を変更</button>
+        </div>
+      </div>
+    </div>
     <div class="actions" id="shareClose" style="margin-top:14px">
       <button class="btn ghost" data-close>閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="qrModal">
+  <div class="sheet" style="max-width:360px;">
+    <h3>QRコード</h3>
+    <div id="qrContainer" style="display:flex; justify-content:center; padding:10px; background:#fff; border-radius:12px;"></div>
+    <p style="text-align:center; font-size:13px; color:var(--muted); margin:12px 0 0;" id="qrCaption"></p>
+    <div class="actions">
+      <button class="btn primary" data-close>閉じる</button>
     </div>
   </div>
 </div>
@@ -583,7 +652,9 @@ function switchTab(t) {
   document.querySelectorAll('#shareModal .tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
   document.getElementById('tabExport').style.display = t === 'export' ? 'block' : 'none';
   document.getElementById('tabImport').style.display = t === 'import' ? 'block' : 'none';
+  document.getElementById('tabSync').style.display = t === 'sync' ? 'block' : 'none';
   document.getElementById('shareClose').style.display = t === 'export' ? 'flex' : 'none';
+  if (t === 'sync') renderSyncUI();
 }
 document.getElementById('btnShare').onclick = () => { switchTab('export'); openModal('shareModal'); };
 document.querySelectorAll('#shareModal .tabs button').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
@@ -681,6 +752,225 @@ function toast(msg) {
 }
 
 render();
+
+/* ============ Firebase リアルタイム同期 ============ */
+const fb = {
+  config: (() => { try { return JSON.parse(localStorage.getItem('tb_fbConfig') || 'null'); } catch { return null; } })(),
+  roomCode: localStorage.getItem('tb_roomCode') || null,
+  app: null, db: null, unsub: null, sdk: null, lastSyncedAt: 0, applying: false,
+};
+
+async function loadFbSDK() {
+  if (fb.sdk) return fb.sdk;
+  const [appMod, fsMod] = await Promise.all([
+    import('https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js'),
+    import('https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js'),
+  ]);
+  fb.sdk = { ...appMod, ...fsMod };
+  return fb.sdk;
+}
+
+function genRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s.slice(0,4) + '-' + s.slice(4);
+}
+
+async function fbInitApp() {
+  if (!fb.config) return false;
+  if (fb.app) return true;
+  try {
+    const sdk = await loadFbSDK();
+    fb.app = sdk.initializeApp(fb.config);
+    fb.db = sdk.getFirestore(fb.app);
+    return true;
+  } catch (e) {
+    console.error(e);
+    toast('Firebase接続エラー: ' + e.message);
+    return false;
+  }
+}
+
+async function fbConnectRoom(code, { mergeFromRemote = true } = {}) {
+  if (!(await fbInitApp())) return;
+  const sdk = fb.sdk;
+  fb.roomCode = code;
+  localStorage.setItem('tb_roomCode', code);
+  if (fb.unsub) { fb.unsub(); fb.unsub = null; }
+  const ref = sdk.doc(fb.db, 'travelBudgets', code);
+  try {
+    const snap = await sdk.getDoc(ref);
+    if (snap.exists() && mergeFromRemote) {
+      const remote = snap.data();
+      if (remote && remote.data) {
+        fb.applying = true;
+        data = { ...defaultData(), ...remote.data };
+        localStorage.setItem('travelBudget', JSON.stringify(data));
+        render();
+        fb.applying = false;
+        fb.lastSyncedAt = remote.updatedAt || 0;
+      }
+    } else if (!snap.exists()) {
+      await fbPush();
+    }
+  } catch (e) { console.error(e); }
+  fb.unsub = sdk.onSnapshot(ref, (s) => {
+    if (!s.exists()) return;
+    const remote = s.data();
+    if (!remote || !remote.data) return;
+    if (remote.updatedAt && remote.updatedAt === fb.lastSyncedAt) return;
+    fb.applying = true;
+    data = { ...defaultData(), ...remote.data };
+    localStorage.setItem('travelBudget', JSON.stringify(data));
+    render();
+    fb.applying = false;
+    fb.lastSyncedAt = remote.updatedAt || Date.now();
+    updateSyncBadge('synced');
+  }, (err) => {
+    console.error(err);
+    updateSyncBadge('error');
+  });
+  updateSyncBadge('synced');
+  renderSyncUI();
+}
+
+async function fbPush() {
+  if (!fb.db || !fb.roomCode || fb.applying) return;
+  try {
+    updateSyncBadge('syncing');
+    const ts = Date.now();
+    fb.lastSyncedAt = ts;
+    await fb.sdk.setDoc(fb.sdk.doc(fb.db, 'travelBudgets', fb.roomCode), { data, updatedAt: ts });
+    updateSyncBadge('synced');
+  } catch (e) {
+    console.error(e);
+    updateSyncBadge('error');
+  }
+}
+
+function fbDisconnect() {
+  if (fb.unsub) fb.unsub();
+  fb.unsub = null;
+  fb.roomCode = null;
+  localStorage.removeItem('tb_roomCode');
+  updateSyncBadge('off');
+  renderSyncUI();
+}
+
+function updateSyncBadge(state) {
+  const el = document.getElementById('syncBadge');
+  if (!fb.roomCode) { el.style.display = 'none'; return; }
+  el.style.display = 'inline-block';
+  const map = {
+    synced: { text: '🔄 同期中', bg: '#dcfce7', color: '#16a34a' },
+    syncing: { text: '⋯ 送信中', bg: '#fef3c7', color: '#b45309' },
+    error: { text: '⚠ 接続失敗', bg: '#fee2e2', color: '#dc2626' },
+    off: { text: '', bg: '', color: '' },
+  };
+  const m = map[state] || map.synced;
+  el.textContent = m.text;
+  el.style.background = m.bg;
+  el.style.color = m.color;
+  const s = document.getElementById('syncStatus');
+  if (s && fb.roomCode) s.textContent = state === 'synced' ? '✓ 同期中' : state === 'syncing' ? '送信中...' : state === 'error' ? '⚠ 接続エラー' : '';
+}
+
+function renderSyncUI() {
+  const setup = document.getElementById('syncSetup');
+  const room = document.getElementById('syncRoom');
+  if (fb.config && fb.roomCode) {
+    setup.style.display = 'none';
+    room.style.display = 'block';
+    document.getElementById('roomCodeDisplay').textContent = fb.roomCode;
+  } else if (fb.config) {
+    setup.style.display = 'none';
+    room.style.display = 'block';
+    document.getElementById('roomCodeDisplay').textContent = '未接続';
+    document.getElementById('syncStatus').textContent = '新規ルームを作成してください';
+  } else {
+    setup.style.display = 'block';
+    room.style.display = 'none';
+    if (fb.config) document.getElementById('fbConfig').value = JSON.stringify(fb.config, null, 2);
+  }
+}
+
+document.getElementById('fbConnect').onclick = async () => {
+  const txt = document.getElementById('fbConfig').value.trim();
+  if (!txt) { toast('設定を貼り付けてください'); return; }
+  let cfg;
+  try {
+    // Accept either JSON, or JS object literal (with unquoted keys)
+    cfg = JSON.parse(txt);
+  } catch {
+    try {
+      cfg = (new Function('return (' + txt + ')'))();
+    } catch (e) { toast('設定の形式が不正です'); return; }
+  }
+  if (!cfg || !cfg.projectId || !cfg.apiKey) { toast('projectId/apiKeyが見つかりません'); return; }
+  fb.config = cfg;
+  localStorage.setItem('tb_fbConfig', JSON.stringify(cfg));
+  if (!(await fbInitApp())) return;
+  const code = genRoomCode();
+  await fbConnectRoom(code, { mergeFromRemote: false });
+  toast('接続しました。ルームコード: ' + code);
+};
+
+document.getElementById('copyRoomCode').onclick = async () => {
+  if (!fb.roomCode) return;
+  if (await copyText(fb.roomCode)) toast('コードをコピーしました');
+  else showCopyFallback(fb.roomCode, 'ルームコード');
+};
+
+document.getElementById('showRoomQR').onclick = () => {
+  if (!fb.roomCode) return;
+  const url = location.origin + location.pathname + '?room=' + encodeURIComponent(fb.roomCode);
+  const c = document.getElementById('qrContainer');
+  c.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(url);
+  img.style.width = '260px'; img.style.height = '260px';
+  c.appendChild(img);
+  document.getElementById('qrCaption').textContent = fb.roomCode;
+  openModal('qrModal');
+};
+
+document.getElementById('joinRoomBtn').onclick = async () => {
+  const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+  if (!code) { toast('コードを入力してください'); return; }
+  await fbConnectRoom(code, { mergeFromRemote: true });
+  toast('ルームに参加しました');
+};
+
+document.getElementById('syncDisconnect').onclick = () => {
+  if (!confirm('同期を切断しますか? (Firebase設定は保存されます)')) return;
+  fbDisconnect();
+};
+
+// Auto-connect on load if previously configured
+(async () => {
+  if (fb.config && fb.roomCode) {
+    await fbConnectRoom(fb.roomCode, { mergeFromRemote: true });
+  }
+  // Handle ?room= URL param (join via QR/link)
+  const params = new URLSearchParams(location.search);
+  const roomParam = params.get('room');
+  if (roomParam && fb.config) {
+    history.replaceState(null, '', location.pathname);
+    if (confirm('ルーム "' + roomParam + '" に参加しますか?')) {
+      await fbConnectRoom(roomParam, { mergeFromRemote: true });
+    }
+  } else if (roomParam && !fb.config) {
+    toast('先にFirebase設定が必要です');
+  }
+})();
+
+// Hook save() to push changes
+const _origSave = save;
+save = function() {
+  _origSave();
+  if (fb.roomCode && !fb.applying) fbPush();
+};
 </script>
 </body>
 </html>
