@@ -105,6 +105,10 @@
   }
   .list .row .del:hover { color: var(--danger); }
   .empty { padding: 28px; text-align: center; color: var(--muted); font-size: 13px; }
+  .date-group { padding: 10px 14px 8px; background: #f7f8fb; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; }
+  .date-group:not(:first-child) { border-top: 1px solid var(--border); }
+  .date-group .d { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+  .date-group .sum { font-size: 12px; font-weight: 700; color: var(--text); }
 
   .fab {
     position: fixed; right: max(16px, calc((100vw - 720px)/2 + 16px)); bottom: 20px;
@@ -516,19 +520,43 @@ function render() {
         default:           return (b.date||'').localeCompare(a.date||'') || b.createdAt - a.createdAt;
       }
     });
-    expEl.innerHTML = sorted.map(e => {
+    const groupByDate = sortMode === 'date-desc' || sortMode === 'date-asc';
+    const rowHtml = (e) => {
       const cat = data.categories.find(c => c.id === e.categoryId) || { emoji: '💸', name: '未分類', color: '#888' };
+      const sub = groupByDate
+        ? `${escapeHtml(cat.name)}${e.note ? ' · '+escapeHtml(e.note) : ''}`
+        : `${escapeHtml(cat.name)} · ${formatDate(e.date)}${e.note ? ' · '+escapeHtml(e.note) : ''}`;
       return `
         <div class="row" data-exp="${e.id}">
           <span class="emo" style="background:${cat.color}22">${cat.emoji}</span>
           <div class="info">
             <div class="t">${escapeHtml(e.name||'(名称なし)')}</div>
-            <div class="s">${escapeHtml(cat.name)} · ${formatDate(e.date)}${e.note ? ' · '+escapeHtml(e.note) : ''}</div>
+            <div class="s">${sub}</div>
           </div>
           <div class="amt">${fmt(e.amount)}</div>
           <button class="del" data-del-exp="${e.id}">×</button>
         </div>`;
-    }).join('');
+    };
+    if (groupByDate) {
+      const groups = [];
+      const map = new Map();
+      for (const e of sorted) {
+        const k = e.date || '';
+        if (!map.has(k)) { map.set(k, { date: k, items: [], sum: 0 }); groups.push(map.get(k)); }
+        const g = map.get(k);
+        g.items.push(e);
+        g.sum += (+e.amount||0);
+      }
+      expEl.innerHTML = groups.map(g => `
+        <div class="date-group">
+          <span class="d">${g.date ? formatDate(g.date) : '日付なし'}</span>
+          <span class="sum">${fmt(g.sum)}</span>
+        </div>
+        ${g.items.map(rowHtml).join('')}
+      `).join('');
+    } else {
+      expEl.innerHTML = sorted.map(rowHtml).join('');
+    }
     expEl.querySelectorAll('[data-exp]').forEach(r => {
       r.onclick = (ev) => { if (ev.target.closest('[data-del-exp]')) return; openExpenseModal(r.dataset.exp); };
     });
