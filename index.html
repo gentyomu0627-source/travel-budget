@@ -247,7 +247,7 @@
     <h3 id="expenseTitle">支出を追加</h3>
     <div class="field"><label>内容</label><input type="text" id="expName" placeholder="例: 夕食、ホテル代" /></div>
     <div class="row-2">
-      <div class="field"><label>金額</label><input type="number" id="expAmount" placeholder="0" inputmode="numeric" /></div>
+      <div class="field"><label>金額</label><input type="text" id="expAmount" placeholder="例: 1200+800 や 500*3" inputmode="decimal" autocomplete="off" /><div id="expAmountCalc" style="font-size:12px;color:var(--muted);margin-top:4px;min-height:16px;"></div></div>
       <div class="field"><label>日付</label><input type="date" id="expDate" /></div>
     </div>
     <div class="field"><label>カテゴリー</label><select id="expCategory"></select></div>
@@ -587,6 +587,7 @@ function openExpenseModal(expId, presetCat) {
   document.getElementById('expenseTitle').textContent = exp ? '支出を編集' : '支出を追加';
   document.getElementById('expName').value = exp?.name || '';
   document.getElementById('expAmount').value = exp?.amount || '';
+  document.getElementById('expAmountCalc').textContent = '';
   document.getElementById('expDate').value = exp?.date || new Date().toISOString().slice(0,10);
   document.getElementById('expNote').value = exp?.note || '';
   const catSel = document.getElementById('expCategory');
@@ -599,9 +600,35 @@ document.getElementById('fab').onclick = () => {
   if (data.categories.length === 0) { toast('先にカテゴリーを追加してください'); return; }
   openExpenseModal();
 };
+function evalAmount(s) {
+  const v = String(s||'').replace(/[¥,，、\s]/g,'').replace(/×/g,'*').replace(/÷/g,'/');
+  if (!v) return 0;
+  if (!/^[\d+\-*/().]+$/.test(v)) return NaN;
+  try { const r = Function('"use strict";return ('+v+')')(); return (typeof r==='number' && isFinite(r)) ? r : NaN; }
+  catch(e) { return NaN; }
+}
+(function(){
+  const inp = document.getElementById('expAmount');
+  const out = document.getElementById('expAmountCalc');
+  const update = () => {
+    const raw = inp.value;
+    const r = evalAmount(raw);
+    if (!raw) { out.textContent = ''; return; }
+    if (isNaN(r)) { out.textContent = '式が正しくありません'; out.style.color = 'var(--danger,#e74c3c)'; return; }
+    out.style.color = 'var(--muted)';
+    // Only show preview if input contains an operator
+    if (/[+\-*/×÷]/.test(raw)) out.textContent = '= ' + (data.currency||'¥') + Math.round(r).toLocaleString('ja-JP');
+    else out.textContent = '';
+  };
+  inp.addEventListener('input', update);
+  inp.addEventListener('focus', update);
+})();
 document.getElementById('expSave').onclick = () => {
   const name = document.getElementById('expName').value.trim();
-  const amount = +document.getElementById('expAmount').value || 0;
+  const amountRaw = document.getElementById('expAmount').value;
+  const amountEval = evalAmount(amountRaw);
+  if (isNaN(amountEval)) { toast('金額の式が正しくありません'); return; }
+  const amount = Math.round(amountEval) || 0;
   const date = document.getElementById('expDate').value;
   const categoryId = document.getElementById('expCategory').value;
   const note = document.getElementById('expNote').value.trim();
