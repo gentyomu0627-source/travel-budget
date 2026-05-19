@@ -231,12 +231,6 @@
 
   <div class="section-title">
     <h2>支出履歴</h2>
-    <select id="sortSelect" style="border:none; background:none; color:var(--primary); font-size:13px; font-weight:600; cursor:pointer; padding:4px 6px; font-family:inherit; outline:none;">
-      <option value="date-desc">日付: 新しい順</option>
-      <option value="date-asc">日付: 古い順</option>
-      <option value="amount-desc">金額: 高い順</option>
-      <option value="amount-asc">金額: 低い順</option>
-    </select>
   </div>
   <div class="list" id="expenses"></div>
 </div>
@@ -537,16 +531,15 @@ function render() {
   if (data.expenses.length === 0) {
     expEl.innerHTML = '<div class="empty">「+」ボタンから支出を追加しましょう</div>';
   } else {
-    const sortMode = localStorage.getItem('tb_sort') || 'date-desc';
-    const sorted = [...data.expenses].sort((a,b) => {
-      switch (sortMode) {
-        case 'date-asc':   return (a.date||'').localeCompare(b.date||'') || a.createdAt - b.createdAt;
-        case 'amount-desc':return (+b.amount||0) - (+a.amount||0);
-        case 'amount-asc': return (+a.amount||0) - (+b.amount||0);
-        default:           return (b.date||'').localeCompare(a.date||'') || b.createdAt - a.createdAt;
-      }
-    });
-    const groupByDate = sortMode === 'date-desc' || sortMode === 'date-asc';
+    // 並び順は固定: ①日付の古い順 ②同日内はカテゴリー順 ③追加順
+    const catOrder = new Map(data.categories.map((c,i) => [c.id, i]));
+    const catIdx = (id) => catOrder.has(id) ? catOrder.get(id) : 9999;
+    const sorted = [...data.expenses].sort((a,b) =>
+      (a.date||'').localeCompare(b.date||'')
+      || catIdx(a.categoryId) - catIdx(b.categoryId)
+      || (a.createdAt||0) - (b.createdAt||0)
+    );
+    const groupByDate = true;
     const rowHtml = (e) => {
       const cat = data.categories.find(c => c.id === e.categoryId) || { emoji: '💸', name: '未分類', color: '#888' };
       const sub = groupByDate
@@ -865,13 +858,6 @@ function toast(msg) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => t.classList.remove('show'), 2000);
 }
-
-// Sort mode for expenses
-(() => {
-  const sel = document.getElementById('sortSelect');
-  sel.value = localStorage.getItem('tb_sort') || 'date-desc';
-  sel.onchange = () => { localStorage.setItem('tb_sort', sel.value); render(); };
-})();
 
 render();
 
