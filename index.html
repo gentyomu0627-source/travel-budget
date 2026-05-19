@@ -203,6 +203,7 @@
   <header>
     <div>
       <h1 id="tripName" style="cursor:pointer">旅行名を設定</h1>
+      <div id="tripDates" style="font-size:13px;color:var(--muted);margin-top:2px;cursor:pointer;"></div>
     </div>
     <div>
       <span id="syncBadge" style="display:none; font-size:11px; color:var(--success, #22c55e); background:#dcfce7; padding:4px 8px; border-radius:99px; margin-right:4px; vertical-align:middle; font-weight:600;">🔄 同期中</span>
@@ -248,7 +249,7 @@
     <div class="field"><label>内容</label><input type="text" id="expName" placeholder="例: 夕食、ホテル代" /></div>
     <div class="row-2">
       <div class="field"><label>金額</label><input type="text" id="expAmount" placeholder="例: 1200+800 や 500*3" inputmode="decimal" autocomplete="off" /><div id="expAmountCalc" style="font-size:12px;color:var(--muted);margin-top:4px;min-height:16px;"></div></div>
-      <div class="field"><label>日付</label><input type="date" id="expDate" /></div>
+      <div class="field"><label>日付</label><select id="expDate"></select></div>
     </div>
     <div class="field"><label>カテゴリー</label><select id="expCategory"></select></div>
     <div class="field"><label>メモ (任意)</label><input type="text" id="expNote" /></div>
@@ -277,6 +278,10 @@
   <div class="sheet">
     <h3>設定</h3>
     <div class="field"><label>旅行名</label><input type="text" id="setTripName" /></div>
+    <div class="row-2">
+      <div class="field"><label>開始日</label><input type="date" id="setStartDate" /></div>
+      <div class="field"><label>終了日</label><input type="date" id="setEndDate" /></div>
+    </div>
     <div class="field"><label>予算合計</label><input type="number" id="setBudget" placeholder="0" inputmode="numeric" /></div>
     <div class="row-2">
       <div class="field"><label>人数</label><input type="number" id="setPeople" min="1" /></div>
@@ -425,6 +430,8 @@ const defaultData = () => ({
   people: 1,
   currency: '¥',
   totalBudget: 0,
+  startDate: '',
+  endDate: '',
   categories: [
     { id: newId(), name: '交通費', emoji: '✈️', color: '#4a7dff' },
     { id: newId(), name: '宿泊費', emoji: '🏨', color: '#22c55e' },
@@ -468,9 +475,28 @@ function formatDate(d) {
   const [, m, day] = d.split('-');
   return `${+m}月${+day}日`;
 }
+function tripDateList() {
+  const s = data.startDate, e = data.endDate;
+  if (!s) return [];
+  const out = [];
+  const cur = new Date(s + 'T00:00:00');
+  const end = new Date((e||s) + 'T00:00:00');
+  if (isNaN(cur) || isNaN(end)) return [];
+  while (cur <= end) {
+    out.push(cur.toISOString().slice(0,10));
+    cur.setDate(cur.getDate() + 1);
+    if (out.length > 365) break;
+  }
+  return out;
+}
 
 function render() {
   document.getElementById('tripName').textContent = data.tripName ? data.tripName : '旅行名を設定';
+  const _dl = tripDateList();
+  const _td = document.getElementById('tripDates');
+  if (_dl.length === 0) _td.textContent = '日付を設定';
+  else if (_dl.length === 1) _td.textContent = formatDate(_dl[0]);
+  else _td.textContent = `${formatDate(_dl[0])} 〜 ${formatDate(_dl[_dl.length-1])} (${_dl.length}日間)`;
   const totalBudget = +data.totalBudget || 0;
   const totalSpent = data.expenses.reduce((s,e) => s + (+e.amount||0), 0);
   const remaining = totalBudget - totalSpent;
@@ -586,7 +612,21 @@ function openExpenseModal(expId, presetCat) {
   document.getElementById('expName').value = exp?.name || '';
   document.getElementById('expAmount').value = exp?.amount || '';
   document.getElementById('expAmountCalc').textContent = '';
-  document.getElementById('expDate').value = exp?.date || new Date().toISOString().slice(0,10);
+  const dateSel = document.getElementById('expDate');
+  const dl = tripDateList();
+  if (dl.length === 0) {
+    dateSel.innerHTML = '<option value="">設定で旅行の日付を登録してください</option>';
+    dateSel.value = '';
+  } else {
+    let opts = dl.map((d,i) => `<option value="${d}">${i+1}日目 (${formatDate(d)})</option>`).join('');
+    const cur = exp?.date;
+    // 既存の支出が範囲外の日付を持っていた場合も選べるようにオプションを追加
+    if (cur && !dl.includes(cur)) {
+      opts += `<option value="${cur}">${formatDate(cur)} (範囲外)</option>`;
+    }
+    dateSel.innerHTML = opts;
+    dateSel.value = cur || dl[0];
+  }
   document.getElementById('expNote').value = exp?.note || '';
   const catSel = document.getElementById('expCategory');
   catSel.innerHTML = data.categories.map(c => `<option value="${c.id}">${c.emoji} ${escapeHtml(c.name)}</option>`).join('');
@@ -693,15 +733,23 @@ document.getElementById('catDelete').onclick = () => {
 
 function openSettings() {
   document.getElementById('setTripName').value = data.tripName;
+  document.getElementById('setStartDate').value = data.startDate || '';
+  document.getElementById('setEndDate').value = data.endDate || '';
   document.getElementById('setBudget').value = data.totalBudget || '';
   document.getElementById('setPeople').value = data.people;
   document.getElementById('setCurrency').value = data.currency;
   openModal('settingsModal');
 }
 document.getElementById('tripName').onclick = openSettings;
+document.getElementById('tripDates').onclick = openSettings;
 document.getElementById('btnSettings').onclick = openSettings;
 document.getElementById('setSave').onclick = () => {
   data.tripName = document.getElementById('setTripName').value.trim();
+  let sd = document.getElementById('setStartDate').value;
+  let ed = document.getElementById('setEndDate').value;
+  if (sd && ed && sd > ed) { [sd, ed] = [ed, sd]; }
+  data.startDate = sd;
+  data.endDate = ed;
   data.totalBudget = +document.getElementById('setBudget').value || 0;
   data.people = Math.max(1, +document.getElementById('setPeople').value || 1);
   data.currency = document.getElementById('setCurrency').value;
