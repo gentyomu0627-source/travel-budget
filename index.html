@@ -105,6 +105,10 @@
   }
   .list .row .del:hover { color: var(--danger); }
   .empty { padding: 28px; text-align: center; color: var(--muted); font-size: 13px; }
+  .cat-card, .list .row { cursor: grab; }
+  .cat-card:active, .list .row:active { cursor: grabbing; }
+  .sortable-ghost { opacity: .35; }
+  .sortable-chosen { background: #eef2ff; }
   .date-group { padding: 10px 14px 8px; background: #f7f8fb; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; }
   .date-group:not(:first-child) { border-top: 1px solid var(--border); }
   .date-group .d { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
@@ -197,6 +201,7 @@
   .tabs button.active { background: #fff; color: var(--text); box-shadow: var(--shadow); }
   textarea { resize: vertical; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -531,12 +536,13 @@ function render() {
   if (data.expenses.length === 0) {
     expEl.innerHTML = '<div class="empty">「+」ボタンから支出を追加しましょう</div>';
   } else {
-    // 並び順は固定: ①日付の古い順 ②同日内はカテゴリー順 ③追加順
+    // 並び順: ①日付の古い順 ②各日内は order(ドラッグで変更可) → 未設定なら カテゴリー順
     const catOrder = new Map(data.categories.map((c,i) => [c.id, i]));
     const catIdx = (id) => catOrder.has(id) ? catOrder.get(id) : 9999;
+    const orderKey = (e) => (typeof e.order === 'number') ? e.order : (catIdx(e.categoryId) * 1e6 + (e.createdAt||0) % 1e6);
     const sorted = [...data.expenses].sort((a,b) =>
       (a.date||'').localeCompare(b.date||'')
-      || catIdx(a.categoryId) - catIdx(b.categoryId)
+      || orderKey(a) - orderKey(b)
       || (a.createdAt||0) - (b.createdAt||0)
     );
     const groupByDate = true;
@@ -571,7 +577,7 @@ function render() {
           <span class="d">${g.date ? formatDate(g.date) : '日付なし'}</span>
           <span class="sum">${fmt(g.sum)}</span>
         </div>
-        ${g.items.map(rowHtml).join('')}
+        <div class="day-items" data-day="${g.date || ''}">${g.items.map(rowHtml).join('')}</div>
       `).join('');
     } else {
       expEl.innerHTML = sorted.map(rowHtml).join('');
@@ -589,6 +595,42 @@ function render() {
       };
     });
   }
+  initSortables();
+}
+
+function initSortables() {
+  if (typeof Sortable === 'undefined') return;
+  // カテゴリーの並び替え
+  const catEl = document.getElementById('categories');
+  if (catEl && !catEl._sortable) {
+    catEl._sortable = Sortable.create(catEl, {
+      animation: 150,
+      delay: 200, delayOnTouchOnly: true, touchStartThreshold: 5,
+      filter: '.menu',
+      onEnd: () => {
+        const ids = [...catEl.querySelectorAll('[data-cat]')].map(el => el.dataset.cat);
+        data.categories.sort((a,b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+        save();
+      }
+    });
+  }
+  // 支出の並び替え（日付ごと）
+  document.querySelectorAll('#expenses .day-items').forEach(box => {
+    if (box._sortable) return;
+    box._sortable = Sortable.create(box, {
+      animation: 150,
+      delay: 200, delayOnTouchOnly: true, touchStartThreshold: 5,
+      filter: '.del',
+      onEnd: () => {
+        const ids = [...box.querySelectorAll('[data-exp]')].map(el => el.dataset.exp);
+        ids.forEach((id, i) => {
+          const e = data.expenses.find(x => x.id === id);
+          if (e) e.order = i;
+        });
+        save();
+      }
+    });
+  });
 }
 
 function openModal(id) { document.getElementById(id).classList.add('show'); }
