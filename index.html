@@ -481,8 +481,14 @@ function tripDateList() {
   const cur = new Date(s + 'T00:00:00');
   const end = new Date((e||s) + 'T00:00:00');
   if (isNaN(cur) || isNaN(end)) return [];
+  const toLocalISO = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+  };
   while (cur <= end) {
-    out.push(cur.toISOString().slice(0,10));
+    out.push(toLocalISO(cur));
     cur.setDate(cur.getDate() + 1);
     if (out.length > 365) break;
   }
