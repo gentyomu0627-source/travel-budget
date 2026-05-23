@@ -200,17 +200,82 @@
   }
   .tabs button.active { background: #fff; color: var(--text); box-shadow: var(--shadow); }
   textarea { resize: vertical; }
+
+  /* ホーム: 旅行カード */
+  .trip-card { background: var(--card); border-radius: 16px; padding: 14px; box-shadow: var(--shadow); margin-bottom: 12px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: transform .12s; }
+  .trip-card:hover { transform: translateY(-1px); }
+  .trip-card .ico { flex-shrink:0; font-size:32px; width:64px; height:64px; display:flex; align-items:center; justify-content:center; background: var(--primary-soft); border-radius:14px; overflow:hidden; }
+  .trip-card .ico img { width:100%; height:100%; object-fit:cover; border-radius:14px; }
+  .trip-card .info { flex: 1; min-width: 0; }
+  .trip-card .name { font-size: 16px; font-weight: 700; }
+  .trip-card .dates { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .trip-card .nums { font-size: 11px; color: var(--muted); margin-top: 6px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .trip-card .nums b { color: var(--text); font-size: 12px; }
+  .trip-card .nums .over { color: var(--danger); font-weight: 700; }
+  .trip-card .nums .under { color: #16a34a; font-weight: 700; }
+  .trip-card .nums .none { color: var(--muted); }
+  .trip-card .bar { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+  .trip-card .bar > div { height: 100%; border-radius: 99px; }
+  .trip-card .actions-mini { display:flex; gap:4px; flex-shrink:0; }
+  .trip-card .actions-mini button { border:none; background:transparent; color:var(--muted); font-size:14px; padding:6px 8px; border-radius:6px; cursor:pointer; }
+  .trip-card .actions-mini button:hover { background:var(--border); color:var(--text); }
+
+  /* 予算 vs 実績 リスト */
+  .budget-row { background: var(--card); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); margin-bottom: 8px; cursor: pointer; }
+  .budget-row .top { display: flex; align-items: center; gap: 10px; }
+  .budget-row .emo { font-size: 18px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--primary-soft); border-radius: 10px; }
+  .budget-row .name { flex: 1; font-size: 14px; font-weight: 600; }
+  .budget-row .num { font-size: 13px; font-weight: 700; text-align: right; }
+  .budget-row .num .sub { font-size: 11px; color: var(--muted); font-weight: 500; }
+  .budget-row .bar { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 10px; }
+  .budget-row .bar > div { height: 100%; border-radius: 99px; }
+  .budget-row .meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .budget-row .meta .actual { color: var(--text); font-weight: 700; }
+  .budget-row .meta .delta.under { color: #16a34a; font-weight: 700; }
+  .budget-row .meta .delta.over { color: var(--danger); font-weight: 700; }
+  .budget-row .menu { border:none; background:transparent; color:var(--muted); font-size:16px; cursor:pointer; padding:2px 6px; border-radius:6px; }
+  .budget-row .menu:hover { background: var(--border); color: var(--text); }
+
+  /* 写真選択 */
+  .photo-picker { display:flex; gap:10px; align-items:center; }
+  .photo-picker .preview { width:64px; height:64px; border-radius:14px; background:var(--primary-soft); display:flex; align-items:center; justify-content:center; font-size:32px; overflow:hidden; flex-shrink:0; }
+  .photo-picker .preview img { width:100%; height:100%; object-fit:cover; }
+  .icon-emoji-grid { display:grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .icon-emoji-grid button { border: 1px solid transparent; background: var(--bg); font-size: 20px; padding: 8px 0; border-radius: 8px; cursor: pointer; }
+  .icon-emoji-grid button.active { border-color: var(--primary); background: var(--primary-soft); }
+  .icon-toggle { display:flex; background:var(--bg); border-radius:10px; padding:3px; margin-bottom:10px; }
+  .icon-toggle button { flex:1; padding:8px; border:none; background:transparent; border-radius:8px; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; font-family:inherit; }
+  .icon-toggle button.active { background:#fff; color:var(--text); box-shadow:var(--shadow); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 </head>
 <body>
-<div class="app">
+<!-- 旅行一覧（ホーム） -->
+<div class="app" id="homeView" style="display:none;">
   <header>
     <div>
-      <h1 id="tripName" style="cursor:pointer">旅行名を設定</h1>
-      <div id="tripDates" style="font-size:13px;color:var(--muted);margin-top:2px;cursor:pointer;"></div>
+      <h1>旅行プラン</h1>
     </div>
     <div>
+      <span id="syncBadgeHome" style="display:none; font-size:11px; background:#dcfce7; color:#16a34a; padding:4px 8px; border-radius:99px; margin-right:4px; font-weight:600;">🔄 同期中</span>
+      <button class="icon-btn" id="btnShareHome" title="共有">↗</button>
+    </div>
+  </header>
+  <div id="tripList"></div>
+  <button class="add-trip-btn" id="btnAddTrip" style="width:100%; padding:14px; margin-top:8px; background:var(--primary); color:#fff; border:none; border-radius:14px; font-weight:700; font-size:15px; cursor:pointer; font-family:inherit;">+ 新しい旅行を追加</button>
+</div>
+
+<!-- 旅行詳細 -->
+<div class="app" id="tripView">
+  <header>
+    <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+      <button class="icon-btn" id="btnBackHome" title="戻る" style="margin-left:0; flex-shrink:0;">←</button>
+      <div style="min-width:0;">
+        <h1 id="tripName" style="cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">旅行名を設定</h1>
+        <div id="tripDates" style="font-size:13px;color:var(--muted);margin-top:2px;cursor:pointer;"></div>
+      </div>
+    </div>
+    <div style="flex-shrink:0;">
       <span id="syncBadge" style="display:none; font-size:11px; color:var(--success, #22c55e); background:#dcfce7; padding:4px 8px; border-radius:99px; margin-right:4px; vertical-align:middle; font-weight:600;">🔄 同期中</span>
       <button class="icon-btn" id="btnShare" title="共有">↗</button>
       <button class="icon-btn" id="btnSettings" title="設定">⚙</button>
@@ -228,16 +293,27 @@
     <div class="progress"><div id="progressBar" style="width:0%"></div></div>
   </section>
 
-  <div class="section-title">
-    <h2>カテゴリー</h2>
-    <button id="btnAddCat">+ 追加</button>
+  <div class="tabs" id="detailTabs" style="margin-top:16px;">
+    <button class="active" data-dtab="budget">📊 予算 vs 実績</button>
+    <button data-dtab="expenses">📋 支出履歴</button>
   </div>
-  <div class="categories" id="categories"></div>
 
-  <div class="section-title">
-    <h2>支出履歴</h2>
+  <!-- 予算 vs 実績タブ -->
+  <div id="tabBudget">
+    <div class="section-title">
+      <h2>カテゴリー別</h2>
+      <button id="btnAddCat">+ 追加</button>
+    </div>
+    <div id="budgetList"></div>
   </div>
-  <div class="list" id="expenses"></div>
+
+  <!-- 支出履歴タブ -->
+  <div id="tabExpenses" style="display:none;">
+    <div class="section-title">
+      <h2>支出履歴</h2>
+    </div>
+    <div class="list" id="expenses"></div>
+  </div>
 </div>
 
 <button class="fab" id="fab" title="支出を追加">+</button>
@@ -263,6 +339,7 @@
   <div class="sheet">
     <h3 id="catTitle">カテゴリーを追加</h3>
     <div class="field"><label>名前</label><input type="text" id="catName" placeholder="例: 食費" /></div>
+    <div class="field"><label>予算 (任意)</label><input type="number" id="catBudget" placeholder="0" inputmode="numeric" /><div style="font-size:11px;color:var(--muted);margin-top:4px;">予算 vs 実績の比較に使われます</div></div>
     <div class="field"><label>アイコン</label><div class="emoji-grid" id="emojiGrid"></div></div>
     <div class="field"><label>カラー</label><div class="color-grid" id="colorGrid"></div></div>
     <div class="actions">
@@ -392,6 +469,54 @@
   </div>
 </div>
 
+<div class="overlay" id="tripModal">
+  <div class="sheet">
+    <h3 id="tripModalTitle">新しい旅行</h3>
+    <div class="field">
+      <label>アイコン</label>
+      <div class="icon-toggle">
+        <button type="button" class="active" data-iconmode="emoji">😊 絵文字</button>
+        <button type="button" data-iconmode="photo">📷 写真</button>
+      </div>
+      <div class="photo-picker">
+        <div class="preview" id="tripIconPreview">🏰</div>
+        <div style="flex:1;">
+          <div id="iconEmojiPicker">
+            <div class="icon-emoji-grid" id="tripIconGrid"></div>
+          </div>
+          <div id="iconPhotoPicker" style="display:none;">
+            <input type="file" id="tripPhotoFile" accept="image/*" style="display:none;" />
+            <button type="button" class="btn ghost" id="tripPhotoBtn" style="width:100%;">写真を選択</button>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;">自動で小さくリサイズされます</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="field"><label>旅行名</label><input type="text" id="tripModalName" placeholder="例: ディズニー旅行" /></div>
+    <div class="row-2">
+      <div class="field"><label>開始日</label><input type="date" id="tripModalStart" /></div>
+      <div class="field"><label>終了日</label><input type="date" id="tripModalEnd" /></div>
+    </div>
+    <div class="field"><label>予算合計</label><input type="number" id="tripModalBudget" placeholder="0" inputmode="numeric" /></div>
+    <div class="row-2">
+      <div class="field"><label>人数</label><input type="number" id="tripModalPeople" min="1" value="1" /></div>
+      <div class="field"><label>通貨</label>
+        <select id="tripModalCurrency">
+          <option value="¥">¥ (円)</option>
+          <option value="$">$ (ドル)</option>
+          <option value="€">€ (ユーロ)</option>
+          <option value="₩">₩ (ウォン)</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn danger" id="tripModalDelete" style="display:none;">削除</button>
+      <button class="btn ghost" data-close>キャンセル</button>
+      <button class="btn primary" id="tripModalSave">保存</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="qrModal">
   <div class="sheet" style="max-width:360px;">
     <h3>QRコード</h3>
@@ -424,47 +549,95 @@ const DEFAULT_EMOJIS = ['✈️','🏨','🍱','🚗','🎫','🛍️','☕','�
 const COLORS = ['#4a7dff','#22c55e','#f59e0b','#ef4444','#a855f7','#ec4899','#06b6d4','#f97316'];
 
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-const defaultData = () => ({
+const DEFAULT_TRIP_ICONS = ['🏰','🏖️','⛩️','🗻','🏞️','🌃','✈️','🚗','🚆','🛳️','🏔️','🌴','🌸','🍁','❄️','🎢'];
+const defaultTrip = () => ({
+  id: newId(),
   tripName: '',
+  icon: '🏰',       // emoji
+  photo: '',        // dataURL (if user chose photo); takes precedence over icon
   people: 1,
   currency: '¥',
   totalBudget: 0,
   startDate: '',
   endDate: '',
   categories: [
-    { id: newId(), name: '交通費', emoji: '✈️', color: '#4a7dff' },
-    { id: newId(), name: '宿泊費', emoji: '🏨', color: '#22c55e' },
-    { id: newId(), name: '食費', emoji: '🍱', color: '#f59e0b' },
-    { id: newId(), name: '観光・娯楽', emoji: '🎫', color: '#a855f7' },
-    { id: newId(), name: 'お土産', emoji: '🛍️', color: '#ec4899' },
+    { id: newId(), name: '交通費', emoji: '✈️', color: '#4a7dff', plannedBudget: 0 },
+    { id: newId(), name: '宿泊費', emoji: '🏨', color: '#22c55e', plannedBudget: 0 },
+    { id: newId(), name: '食費', emoji: '🍱', color: '#f59e0b', plannedBudget: 0 },
+    { id: newId(), name: '観光・娯楽', emoji: '🎫', color: '#a855f7', plannedBudget: 0 },
+    { id: newId(), name: 'お土産', emoji: '🛍️', color: '#ec4899', plannedBudget: 0 },
   ],
   expenses: []
 });
+const defaultStore = () => {
+  const t = defaultTrip();
+  return { version: 2, activeTripId: t.id, trips: [t] };
+};
+// For backward compatibility — returns the active trip (same shape that existing code uses)
+const defaultData = defaultTrip;
 
-let data = load();
-let state = { editingExpense: null, editingCategory: null };
+let store = loadStore();
+let data = activeTrip();
+let view = 'home';  // 'home' | 'trip'
+let detailTab = 'budget';  // 'budget' | 'expenses'
+let state = { editingExpense: null, editingCategory: null, editingTrip: null, photoDataUrl: null };
 
-function load() {
+function activeTrip() {
+  let t = store.trips.find(x => x.id === store.activeTripId);
+  if (!t) { t = store.trips[0]; if (t) store.activeTripId = t.id; }
+  return t || defaultTrip();
+}
+
+function loadStore() {
   try {
     if (location.hash.startsWith('#data=')) {
       const d = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(6)))));
       history.replaceState(null, '', location.pathname);
       if (confirm('共有された旅行プランを読み込みますか? (現在のデータは上書きされます)')) {
-        localStorage.setItem('travelBudget', JSON.stringify(d));
-        return d;
+        const migrated = migrate(d);
+        localStorage.setItem('travelBudget', JSON.stringify(migrated));
+        return migrated;
       }
     }
     const s = localStorage.getItem('travelBudget');
     if (s) {
       const d = JSON.parse(s);
-      const def = defaultData();
-      return { ...def, ...d, categories: d.categories || def.categories, expenses: d.expenses || [] };
+      return migrate(d);
     }
   } catch(e) { console.warn(e); }
-  return defaultData();
+  return defaultStore();
 }
+
+// Migrate single-trip schema → multi-trip store
+function migrate(d) {
+  if (d && d.version === 2 && Array.isArray(d.trips)) {
+    // Ensure each trip has the new fields
+    d.trips.forEach(t => {
+      if (!t.icon) t.icon = '🏰';
+      if (typeof t.photo !== 'string') t.photo = '';
+      if (!Array.isArray(t.categories)) t.categories = [];
+      if (!Array.isArray(t.expenses)) t.expenses = [];
+      t.categories.forEach(c => { if (typeof c.plannedBudget !== 'number') c.plannedBudget = 0; });
+    });
+    if (!d.activeTripId || !d.trips.find(x => x.id === d.activeTripId)) {
+      d.activeTripId = d.trips[0]?.id || newId();
+    }
+    return d;
+  }
+  // Old single-trip shape → wrap
+  const t = { ...defaultTrip(), ...d };
+  if (!t.id) t.id = newId();
+  if (!t.icon) t.icon = '🏰';
+  if (typeof t.photo !== 'string') t.photo = '';
+  t.categories.forEach(c => { if (typeof c.plannedBudget !== 'number') c.plannedBudget = 0; });
+  return { version: 2, activeTripId: t.id, trips: [t] };
+}
+
 function save() {
-  localStorage.setItem('travelBudget', JSON.stringify(data));
+  // Persist active trip changes back to store
+  const idx = store.trips.findIndex(x => x.id === data.id);
+  if (idx >= 0) store.trips[idx] = data;
+  localStorage.setItem('travelBudget', JSON.stringify(store));
   render();
 }
 function fmt(n) { return data.currency + Number(n || 0).toLocaleString('ja-JP'); }
@@ -496,6 +669,16 @@ function tripDateList() {
 }
 
 function render() {
+  // ビュー切替
+  document.getElementById('homeView').style.display = view === 'home' ? 'block' : 'none';
+  document.getElementById('tripView').style.display = view === 'trip' ? 'block' : 'none';
+  document.getElementById('fab').style.display = view === 'trip' ? 'flex' : 'none';
+
+  if (view === 'home') { renderHome(); return; }
+
+  // データを最新のアクティブ旅行に同期
+  data = activeTrip();
+
   document.getElementById('tripName').textContent = data.tripName ? data.tripName : '旅行名を設定';
   const _dl = tripDateList();
   const _td = document.getElementById('tripDates');
@@ -515,26 +698,49 @@ function render() {
   pb.style.width = pct + '%';
   pb.style.background = pct > 90 ? '#ffb4b4' : '#fff';
 
-  const catEl = document.getElementById('categories');
-  catEl.innerHTML = data.categories.map(c => {
+  // タブの表示切替
+  document.getElementById('tabBudget').style.display = detailTab === 'budget' ? 'block' : 'none';
+  document.getElementById('tabExpenses').style.display = detailTab === 'expenses' ? 'block' : 'none';
+  document.querySelectorAll('#detailTabs button').forEach(b => b.classList.toggle('active', b.dataset.dtab === detailTab));
+
+  // 予算 vs 実績リスト
+  const budgetEl = document.getElementById('budgetList');
+  budgetEl.innerHTML = data.categories.map(c => {
     const spent = data.expenses.filter(e => e.categoryId === c.id).reduce((s,e) => s + (+e.amount||0), 0);
-    const p = totalSpent ? Math.min(100, (spent/totalSpent)*100) : 0;
+    const planned = +c.plannedBudget || 0;
+    const p = planned ? Math.min(100, (spent/planned)*100) : (totalSpent ? Math.min(100, (spent/totalSpent)*100) : 0);
+    const delta = planned - spent;
+    const overBudget = planned > 0 && spent > planned;
+    const barColor = !planned ? c.color : (overBudget ? '#ef4444' : (p > 80 ? '#f59e0b' : '#16a34a'));
+    let metaRight = '';
+    if (planned > 0) {
+      if (delta >= 0) metaRight = `<span class="delta under">−${fmt(delta)} ✓</span>`;
+      else metaRight = `<span class="delta over">+${fmt(-delta)} 超過</span>`;
+    } else {
+      metaRight = `<span style="color:var(--muted);">予算未設定</span>`;
+    }
+    const numHtml = planned > 0
+      ? `${fmt(spent)} <span class="sub">/ ${fmt(planned)}</span>`
+      : `${fmt(spent)}`;
     return `
-      <div class="cat-card" data-cat="${c.id}">
+      <div class="budget-row" data-cat="${c.id}">
         <div class="top">
-          <span class="emoji">${c.emoji}</span>
+          <span class="emo" style="background:${c.color}22">${c.emoji}</span>
+          <span class="name">${escapeHtml(c.name)}</span>
+          <span class="num">${numHtml}</span>
           <button class="menu" data-edit-cat="${c.id}">⋯</button>
         </div>
-        <div class="name">${escapeHtml(c.name)}</div>
-        <div class="spent">${fmt(spent)}</div>
-        <div class="budget">全体の ${Math.round(p)}%</div>
-        <div class="bar"><div style="width:${p}%; background:${c.color}"></div></div>
+        <div class="bar"><div style="width:${p}%; background:${barColor};"></div></div>
+        <div class="meta">
+          <span>${planned ? `予算 ${fmt(planned)} → <span class="actual">実績 ${fmt(spent)}</span>` : `実績 <span class="actual">${fmt(spent)}</span>`}</span>
+          ${metaRight}
+        </div>
       </div>`;
   }).join('');
-  catEl.querySelectorAll('[data-edit-cat]').forEach(b => {
+  budgetEl.querySelectorAll('[data-edit-cat]').forEach(b => {
     b.onclick = (e) => { e.stopPropagation(); openCatModal(b.dataset.editCat); };
   });
-  catEl.querySelectorAll('[data-cat]').forEach(c => {
+  budgetEl.querySelectorAll('[data-cat]').forEach(c => {
     c.onclick = () => openExpenseModal(null, c.dataset.cat);
   });
 
@@ -604,10 +810,81 @@ function render() {
   initSortables();
 }
 
+function renderHome() {
+  const el = document.getElementById('tripList');
+  if (!store.trips.length) {
+    el.innerHTML = '<div class="empty" style="background:#fff; border-radius:14px; padding:30px;">「+ 新しい旅行を追加」から始めましょう</div>';
+    return;
+  }
+  el.innerHTML = store.trips.map(t => {
+    const totalBudget = +t.totalBudget || 0;
+    const totalSpent = (t.expenses||[]).reduce((s,e) => s + (+e.amount||0), 0);
+    const pct = totalBudget ? Math.min(100, (totalSpent/totalBudget)*100) : 0;
+    const remaining = totalBudget - totalSpent;
+    const cur = t.currency || '¥';
+    const fmtT = (n) => cur + Number(n||0).toLocaleString('ja-JP');
+    const dates = (() => {
+      if (!t.startDate) return '日付未設定';
+      if (!t.endDate || t.startDate === t.endDate) return formatDateFull(t.startDate);
+      return `${formatDateFull(t.startDate)} 〜 ${formatDateFull(t.endDate)}`;
+    })();
+    const icoHtml = t.photo
+      ? `<img src="${t.photo}" alt="" />`
+      : `<span>${t.icon || '🏰'}</span>`;
+    let statusHtml = '';
+    let barColor = 'var(--success, #16a34a)';
+    if (!totalBudget) { statusHtml = `<span class="none">予算未設定</span>`; barColor = '#cbd5e1'; }
+    else if (remaining >= 0) { statusHtml = `<span class="under">残 ${fmtT(remaining)}</span>`; barColor = pct > 80 ? '#f59e0b' : '#16a34a'; }
+    else { statusHtml = `<span class="over">超過 ${fmtT(-remaining)}</span>`; barColor = '#ef4444'; }
+    return `
+      <div class="trip-card" data-trip="${t.id}">
+        <div class="ico">${icoHtml}</div>
+        <div class="info">
+          <div class="name">${escapeHtml(t.tripName || '(無題の旅行)')}</div>
+          <div class="dates">${escapeHtml(dates)}</div>
+          <div class="nums">
+            <span>予算 <b>${fmtT(totalBudget)}</b></span>
+            <span>実績 <b>${fmtT(totalSpent)}</b></span>
+            ${statusHtml}
+          </div>
+          <div class="bar"><div style="width:${Math.min(100, pct)}%; background:${barColor};"></div></div>
+        </div>
+        <div class="actions-mini">
+          <button data-edit-trip="${t.id}" title="編集">⋯</button>
+        </div>
+      </div>`;
+  }).join('');
+  el.querySelectorAll('[data-trip]').forEach(c => {
+    c.onclick = (e) => {
+      if (e.target.closest('[data-edit-trip]')) return;
+      openTrip(c.dataset.trip);
+    };
+  });
+  el.querySelectorAll('[data-edit-trip]').forEach(b => {
+    b.onclick = (e) => { e.stopPropagation(); openTripModal(b.dataset.editTrip); };
+  });
+}
+function formatDateFull(d) {
+  if (!d) return '';
+  const [y, m, day] = d.split('-');
+  return `${+y}年${+m}月${+day}日`;
+}
+function openTrip(tripId) {
+  store.activeTripId = tripId;
+  data = activeTrip();
+  view = 'trip';
+  detailTab = 'budget';
+  save();
+}
+function goHome() {
+  view = 'home';
+  render();
+}
+
 function initSortables() {
   if (typeof Sortable === 'undefined') return;
-  // カテゴリーの並び替え
-  const catEl = document.getElementById('categories');
+  // カテゴリーの並び替え (予算リスト)
+  const catEl = document.getElementById('budgetList');
   if (catEl && !catEl._sortable) {
     catEl._sortable = Sortable.create(catEl, {
       animation: 150,
@@ -727,6 +1004,7 @@ function openCatModal(catId) {
   const cat = catId ? data.categories.find(c => c.id === catId) : null;
   document.getElementById('catTitle').textContent = cat ? 'カテゴリーを編集' : 'カテゴリーを追加';
   document.getElementById('catName').value = cat?.name || '';
+  document.getElementById('catBudget').value = cat?.plannedBudget || '';
   document.getElementById('catDelete').style.display = cat ? 'block' : 'none';
 
   const eg = document.getElementById('emojiGrid');
@@ -751,12 +1029,13 @@ document.getElementById('catSave').onclick = () => {
   const name = document.getElementById('catName').value.trim();
   const emoji = document.querySelector('#emojiGrid button.active')?.dataset.emo || DEFAULT_EMOJIS[0];
   const color = document.querySelector('#colorGrid button.active')?.dataset.color || COLORS[0];
+  const plannedBudget = +document.getElementById('catBudget').value || 0;
   if (!name) { toast('カテゴリー名を入力してください'); return; }
   if (state.editingCategory) {
     const c = data.categories.find(x => x.id === state.editingCategory);
-    Object.assign(c, { name, emoji, color });
+    Object.assign(c, { name, emoji, color, plannedBudget });
   } else {
-    data.categories.push({ id: newId(), name, emoji, color });
+    data.categories.push({ id: newId(), name, emoji, color, plannedBudget });
   }
   closeModal('catModal');
   save();
@@ -798,8 +1077,12 @@ document.getElementById('setSave').onclick = () => {
   save();
 };
 document.getElementById('resetAll').onclick = () => {
-  if (!confirm('すべてのデータを削除して初期状態に戻しますか?')) return;
-  data = defaultData();
+  if (!confirm('この旅行のデータを初期化しますか? (他の旅行は残ります)')) return;
+  const idx = store.trips.findIndex(x => x.id === data.id);
+  const fresh = defaultTrip();
+  fresh.id = data.id;
+  if (idx >= 0) store.trips[idx] = fresh;
+  data = fresh;
   closeModal('settingsModal');
   save();
 };
@@ -858,13 +1141,13 @@ document.getElementById('cfCopyBtn').onclick = async () => {
   else { toast('長押ししてコピーしてください'); }
 };
 document.getElementById('shareLink').onclick = async () => {
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(store))));
   const url = location.origin + location.pathname + '#data=' + encoded;
   if (await copyText(url)) toast('共有リンクをコピーしました');
   else showCopyFallback(url, '共有リンク');
 };
 document.getElementById('shareFile').onclick = () => {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(store, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = (data.tripName || 'travel-budget') + '.json';
@@ -873,7 +1156,7 @@ document.getElementById('shareFile').onclick = () => {
   toast('ファイルを保存しました');
 };
 document.getElementById('shareCopy').onclick = async () => {
-  const txt = JSON.stringify(data, null, 2);
+  const txt = JSON.stringify(store, null, 2);
   if (await copyText(txt)) toast('データをコピーしました');
   else showCopyFallback(txt, 'データ');
 };
@@ -889,10 +1172,10 @@ document.getElementById('importSave').onclick = () => {
   const txt = document.getElementById('importText').value.trim();
   if (!txt) { toast('データが空です'); return; }
   try {
-    const d = JSON.parse(txt);
-    if (!Array.isArray(d.categories) || !Array.isArray(d.expenses)) throw new Error('形式が不正');
+    const parsed = JSON.parse(txt);
     if (!confirm('現在のデータを上書きしますか?')) return;
-    data = d;
+    store = migrate(parsed);
+    data = activeTrip();
     closeModal('shareModal');
     save();
     toast('データを読み込みました');
@@ -907,6 +1190,148 @@ function toast(msg) {
   toast._t = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
+/* ============ ホーム・旅行モーダル ============ */
+document.getElementById('btnBackHome').onclick = goHome;
+document.getElementById('btnAddTrip').onclick = () => openTripModal(null);
+document.getElementById('btnShareHome').onclick = () => { switchTab('export'); openModal('shareModal'); };
+document.querySelectorAll('#detailTabs button').forEach(b => {
+  b.onclick = () => { detailTab = b.dataset.dtab; render(); };
+});
+
+// アイコン切替
+document.querySelectorAll('#tripModal .icon-toggle button').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('#tripModal .icon-toggle button').forEach(x => x.classList.toggle('active', x === b));
+    const mode = b.dataset.iconmode;
+    document.getElementById('iconEmojiPicker').style.display = mode === 'emoji' ? 'block' : 'none';
+    document.getElementById('iconPhotoPicker').style.display = mode === 'photo' ? 'block' : 'none';
+    if (mode === 'emoji') {
+      state.photoDataUrl = null;
+      const sel = document.querySelector('#tripIconGrid button.active');
+      document.getElementById('tripIconPreview').innerHTML = sel ? sel.dataset.emo : '🏰';
+    }
+  };
+});
+
+document.getElementById('tripPhotoBtn').onclick = () => document.getElementById('tripPhotoFile').click();
+document.getElementById('tripPhotoFile').onchange = (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  resizeImage(f, 320).then(dataUrl => {
+    state.photoDataUrl = dataUrl;
+    document.getElementById('tripIconPreview').innerHTML = `<img src="${dataUrl}" />`;
+  }).catch(err => { console.error(err); toast('画像の読み込みに失敗'); });
+};
+
+function resizeImage(file, maxSize) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const r = new FileReader();
+    r.onload = () => { img.src = r.result; };
+    r.onerror = reject;
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
+      else      { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function openTripModal(tripId) {
+  state.editingTrip = tripId;
+  const t = tripId ? store.trips.find(x => x.id === tripId) : null;
+  document.getElementById('tripModalTitle').textContent = t ? '旅行を編集' : '新しい旅行';
+  document.getElementById('tripModalName').value = t?.tripName || '';
+  document.getElementById('tripModalStart').value = t?.startDate || '';
+  document.getElementById('tripModalEnd').value = t?.endDate || '';
+  document.getElementById('tripModalBudget').value = t?.totalBudget || '';
+  document.getElementById('tripModalPeople').value = t?.people || 1;
+  document.getElementById('tripModalCurrency').value = t?.currency || '¥';
+  document.getElementById('tripModalDelete').style.display = t ? 'block' : 'none';
+
+  // アイコングリッド
+  const grid = document.getElementById('tripIconGrid');
+  const selEmo = t?.icon || '🏰';
+  grid.innerHTML = DEFAULT_TRIP_ICONS.map(e => `<button type="button" data-emo="${e}" class="${e===selEmo?'active':''}">${e}</button>`).join('');
+  grid.querySelectorAll('button').forEach(b => b.onclick = () => {
+    grid.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    state.photoDataUrl = null;
+    document.getElementById('tripIconPreview').innerHTML = b.dataset.emo;
+  });
+
+  // モード初期化
+  const useEmoji = !t?.photo;
+  state.photoDataUrl = t?.photo || null;
+  document.querySelectorAll('#tripModal .icon-toggle button').forEach(x =>
+    x.classList.toggle('active', (useEmoji && x.dataset.iconmode === 'emoji') || (!useEmoji && x.dataset.iconmode === 'photo'))
+  );
+  document.getElementById('iconEmojiPicker').style.display = useEmoji ? 'block' : 'none';
+  document.getElementById('iconPhotoPicker').style.display = useEmoji ? 'none' : 'block';
+  document.getElementById('tripIconPreview').innerHTML = useEmoji ? selEmo : `<img src="${t.photo}" />`;
+  document.getElementById('tripPhotoFile').value = '';
+
+  openModal('tripModal');
+}
+
+document.getElementById('tripModalSave').onclick = () => {
+  const name = document.getElementById('tripModalName').value.trim();
+  if (!name) { toast('旅行名を入力してください'); return; }
+  let sd = document.getElementById('tripModalStart').value;
+  let ed = document.getElementById('tripModalEnd').value;
+  if (sd && ed && sd > ed) { [sd, ed] = [ed, sd]; }
+  const useEmoji = document.querySelector('#tripModal .icon-toggle button.active').dataset.iconmode === 'emoji';
+  const icon = document.querySelector('#tripIconGrid button.active')?.dataset.emo || '🏰';
+  const photo = useEmoji ? '' : (state.photoDataUrl || '');
+  const fields = {
+    tripName: name,
+    icon,
+    photo,
+    startDate: sd,
+    endDate: ed,
+    totalBudget: +document.getElementById('tripModalBudget').value || 0,
+    people: Math.max(1, +document.getElementById('tripModalPeople').value || 1),
+    currency: document.getElementById('tripModalCurrency').value,
+  };
+  if (state.editingTrip) {
+    const t = store.trips.find(x => x.id === state.editingTrip);
+    if (t) Object.assign(t, fields);
+    if (state.editingTrip === data.id) data = activeTrip();
+  } else {
+    const t = { ...defaultTrip(), ...fields };
+    store.trips.push(t);
+    store.activeTripId = t.id;
+    data = t;
+    view = 'trip';
+    detailTab = 'budget';
+  }
+  closeModal('tripModal');
+  save();
+};
+
+document.getElementById('tripModalDelete').onclick = () => {
+  if (!state.editingTrip) return;
+  if (store.trips.length <= 1) { toast('最後の旅行は削除できません'); return; }
+  if (!confirm('この旅行を削除しますか? (元に戻せません)')) return;
+  store.trips = store.trips.filter(x => x.id !== state.editingTrip);
+  if (store.activeTripId === state.editingTrip) {
+    store.activeTripId = store.trips[0].id;
+    data = activeTrip();
+  }
+  closeModal('tripModal');
+  view = 'home';
+  save();
+};
+
+// 初期ビュー: 旅行が1件だけならその旅行へ、複数ならホーム
+view = store.trips.length === 1 ? 'trip' : 'home';
+data = activeTrip();
 render();
 
 /* ============ Firebase リアルタイム同期 ============ */
@@ -961,8 +1386,9 @@ async function fbConnectRoom(code, { mergeFromRemote = true } = {}) {
       const remote = snap.data();
       if (remote && remote.data) {
         fb.applying = true;
-        data = { ...defaultData(), ...remote.data };
-        localStorage.setItem('travelBudget', JSON.stringify(data));
+        store = migrate(remote.data);
+        data = activeTrip();
+        localStorage.setItem('travelBudget', JSON.stringify(store));
         render();
         fb.applying = false;
         fb.lastSyncedAt = remote.updatedAt || 0;
@@ -977,8 +1403,9 @@ async function fbConnectRoom(code, { mergeFromRemote = true } = {}) {
     if (!remote || !remote.data) return;
     if (remote.updatedAt && remote.updatedAt === fb.lastSyncedAt) return;
     fb.applying = true;
-    data = { ...defaultData(), ...remote.data };
-    localStorage.setItem('travelBudget', JSON.stringify(data));
+    store = migrate(remote.data);
+    data = activeTrip();
+    localStorage.setItem('travelBudget', JSON.stringify(store));
     render();
     fb.applying = false;
     fb.lastSyncedAt = remote.updatedAt || Date.now();
@@ -997,7 +1424,7 @@ async function fbPush() {
     updateSyncBadge('syncing');
     const ts = Date.now();
     fb.lastSyncedAt = ts;
-    await fb.sdk.setDoc(fb.sdk.doc(fb.db, 'travelBudgets', fb.roomCode), { data, updatedAt: ts });
+    await fb.sdk.setDoc(fb.sdk.doc(fb.db, 'travelBudgets', fb.roomCode), { data: store, updatedAt: ts });
     updateSyncBadge('synced');
   } catch (e) {
     console.error(e);
