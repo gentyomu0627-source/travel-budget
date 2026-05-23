@@ -1352,7 +1352,7 @@ document.getElementById('tripModalDuplicate').onclick = () => {
   if (!state.editingTrip) return;
   const src = store.trips.find(x => x.id === state.editingTrip);
   if (!src) return;
-  if (!confirm('この旅行を複製しますか?\n(金額・メモはクリアされ、それ以外の項目はコピーされます)')) return;
+  if (!confirm('この旅行を複製しますか?\n(メモはクリアされ、それ以外の項目はコピーされます)')) return;
   // ディープコピー
   const dup = JSON.parse(JSON.stringify(src));
   dup.id = newId();
@@ -1364,7 +1364,6 @@ document.getElementById('tripModalDuplicate').onclick = () => {
   dup.expenses.forEach(e => {
     e.id = newId();
     if (e.categoryId && idMap[e.categoryId]) e.categoryId = idMap[e.categoryId];
-    e.amount = 0;
     e.note = '';
   });
   store.trips.push(dup);
