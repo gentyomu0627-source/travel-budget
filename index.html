@@ -1329,8 +1329,8 @@ document.getElementById('tripModalDelete').onclick = () => {
   save();
 };
 
-// 初期ビュー: 旅行が1件だけならその旅行へ、複数ならホーム
-view = store.trips.length === 1 ? 'trip' : 'home';
+// 初期ビュー: 常に旅行プラン一覧 (ホーム) を表示
+view = 'home';
 data = activeTrip();
 render();
 
