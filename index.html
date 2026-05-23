@@ -511,6 +511,7 @@
     </div>
     <div class="actions">
       <button class="btn danger" id="tripModalDelete" style="display:none;">削除</button>
+      <button class="btn ghost" id="tripModalDuplicate" style="display:none; flex:0 0 auto; padding:13px 18px;">🗐 複製</button>
       <button class="btn ghost" data-close>キャンセル</button>
       <button class="btn primary" id="tripModalSave">保存</button>
     </div>
@@ -1262,6 +1263,7 @@ function openTripModal(tripId) {
   document.getElementById('tripModalPeople').value = t?.people || 1;
   document.getElementById('tripModalCurrency').value = t?.currency || '¥';
   document.getElementById('tripModalDelete').style.display = t ? 'block' : 'none';
+  document.getElementById('tripModalDuplicate').style.display = t ? 'block' : 'none';
 
   // アイコングリッド
   const grid = document.getElementById('tripIconGrid');
@@ -1323,6 +1325,30 @@ document.getElementById('tripModalSave').onclick = () => {
   save();
 };
 
+document.getElementById('tripModalDuplicate').onclick = () => {
+  if (!state.editingTrip) return;
+  const src = store.trips.find(x => x.id === state.editingTrip);
+  if (!src) return;
+  const includeExpenses = confirm('支出履歴も含めて複製しますか?\n\n「OK」: 支出履歴ごとコピー\n「キャンセル」: カテゴリーと予算のみコピー (支出は空)');
+  // ディープコピー
+  const dup = JSON.parse(JSON.stringify(src));
+  dup.id = newId();
+  dup.tripName = (src.tripName || '無題の旅行') + ' (コピー)';
+  // カテゴリーIDを振り直し（衝突回避）+ 旧IDマップ
+  const idMap = {};
+  dup.categories.forEach(c => { const nid = newId(); idMap[c.id] = nid; c.id = nid; });
+  if (includeExpenses) {
+    dup.expenses.forEach(e => { e.id = newId(); if (e.categoryId && idMap[e.categoryId]) e.categoryId = idMap[e.categoryId]; });
+  } else {
+    dup.expenses = [];
+  }
+  store.trips.push(dup);
+  closeModal('tripModal');
+  // 編集モーダルを複製した旅行で再オープン (名前を編集してもらう)
+  setTimeout(() => openTripModal(dup.id), 50);
+  save();
+  toast('旅行を複製しました');
+};
 document.getElementById('tripModalDelete').onclick = () => {
   if (!state.editingTrip) return;
   if (store.trips.length <= 1) { toast('最後の旅行は削除できません'); return; }
