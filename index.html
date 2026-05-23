@@ -1352,22 +1352,23 @@ document.getElementById('tripModalDuplicate').onclick = () => {
   if (!state.editingTrip) return;
   const src = store.trips.find(x => x.id === state.editingTrip);
   if (!src) return;
-  const includeExpenses = confirm('支出履歴も含めて複製しますか?\n\n「OK」: 支出履歴ごとコピー\n「キャンセル」: カテゴリーと予算のみコピー (支出は空)');
+  if (!confirm('この旅行を複製しますか?\n(金額・メモはクリアされ、それ以外の項目はコピーされます)')) return;
   // ディープコピー
   const dup = JSON.parse(JSON.stringify(src));
   dup.id = newId();
   dup.tripName = (src.tripName || '無題の旅行') + ' (コピー)';
-  // カテゴリーIDを振り直し（衝突回避）+ 旧IDマップ
+  // カテゴリーIDを振り直し
   const idMap = {};
   dup.categories.forEach(c => { const nid = newId(); idMap[c.id] = nid; c.id = nid; });
-  if (includeExpenses) {
-    dup.expenses.forEach(e => { e.id = newId(); if (e.categoryId && idMap[e.categoryId]) e.categoryId = idMap[e.categoryId]; });
-  } else {
-    dup.expenses = [];
-  }
+  // 支出は名前・日付・カテゴリーは残し、金額とメモはクリア
+  dup.expenses.forEach(e => {
+    e.id = newId();
+    if (e.categoryId && idMap[e.categoryId]) e.categoryId = idMap[e.categoryId];
+    e.amount = 0;
+    e.note = '';
+  });
   store.trips.push(dup);
   closeModal('tripModal');
-  // 編集モーダルを複製した旅行で再オープン (名前を編集してもらう)
   setTimeout(() => openTripModal(dup.id), 50);
   save();
   toast('旅行を複製しました');
