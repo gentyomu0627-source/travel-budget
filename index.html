@@ -816,7 +816,15 @@ function renderHome() {
     el.innerHTML = '<div class="empty" style="background:#fff; border-radius:14px; padding:30px;">「+ 新しい旅行を追加」から始めましょう</div>';
     return;
   }
-  el.innerHTML = store.trips.map(t => {
+  // 日付の新しい順に並べ替え（日付未設定は最下部）
+  const sortedTrips = [...store.trips].sort((a, b) => {
+    const aHas = !!a.startDate, bHas = !!b.startDate;
+    if (aHas && bHas) return b.startDate.localeCompare(a.startDate);
+    if (aHas) return -1;
+    if (bHas) return 1;
+    return 0;
+  });
+  el.innerHTML = sortedTrips.map(t => {
     const totalBudget = +t.totalBudget || 0;
     const totalSpent = (t.expenses||[]).reduce((s,e) => s + (+e.amount||0), 0);
     const pct = totalBudget ? Math.min(100, (totalSpent/totalBudget)*100) : 0;
