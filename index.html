@@ -294,8 +294,8 @@
   </section>
 
   <div class="tabs" id="detailTabs" style="margin-top:16px;">
-    <button class="active" data-dtab="budget">📊 予算 vs 実績</button>
-    <button data-dtab="expenses">📋 支出履歴</button>
+    <button class="active" data-dtab="expenses">📋 支出履歴</button>
+    <button data-dtab="budget">📊 予算 vs 実績</button>
   </div>
 
   <!-- 予算 vs 実績タブ -->
@@ -579,7 +579,7 @@ const defaultData = defaultTrip;
 let store = loadStore();
 let data = activeTrip();
 let view = 'home';  // 'home' | 'trip'
-let detailTab = 'budget';  // 'budget' | 'expenses'
+let detailTab = 'expenses';  // 'expenses' | 'budget'
 let state = { editingExpense: null, editingCategory: null, editingTrip: null, photoDataUrl: null };
 
 function activeTrip() {
@@ -881,7 +881,7 @@ function openTrip(tripId) {
   store.activeTripId = tripId;
   data = activeTrip();
   view = 'trip';
-  detailTab = 'budget';
+  detailTab = 'expenses';
   save();
 }
 function goHome() {
@@ -1317,7 +1317,7 @@ document.getElementById('tripModalSave').onclick = () => {
     store.activeTripId = t.id;
     data = t;
     view = 'trip';
-    detailTab = 'budget';
+    detailTab = 'expenses';
   }
   closeModal('tripModal');
   save();
