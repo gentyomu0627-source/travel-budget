@@ -1185,30 +1185,27 @@ document.getElementById('importSave').onclick = () => {
     // 単一旅行データ (categoriesとexpensesを持つ) → 新規追加か上書きか選択
     const isSingleTrip = parsed && Array.isArray(parsed.categories) && Array.isArray(parsed.expenses) && !Array.isArray(parsed.trips);
     if (isSingleTrip) {
-      const choice = confirm('このデータを「新しい旅行として追加」しますか?\n\n「OK」: 新しい旅行として追加 (既存の旅行は残ります)\n「キャンセル」: すべて上書き (既存の旅行は消えます)');
-      if (choice) {
-        // 新規追加
-        const newTrip = { ...defaultTrip(), ...parsed };
-        newTrip.id = newId();
-        if (!newTrip.icon) newTrip.icon = '🏰';
-        if (typeof newTrip.photo !== 'string') newTrip.photo = '';
-        // 日付がなければ expenses から自動推定
-        if (!newTrip.startDate && newTrip.expenses?.length) {
-          const dates = newTrip.expenses.map(e => e.date).filter(Boolean).sort();
-          if (dates.length) { newTrip.startDate = dates[0]; newTrip.endDate = dates[dates.length-1]; }
-        }
-        newTrip.categories.forEach(c => { if (typeof c.plannedBudget !== 'number') c.plannedBudget = 0; });
-        store.trips.push(newTrip);
-        store.activeTripId = newTrip.id;
-        data = activeTrip();
-        closeModal('shareModal');
-        save();
-        toast('新しい旅行として追加しました');
-        return;
+      if (!confirm('このデータを「新しい旅行」として追加しますか? (既存の旅行は残ります)')) return;
+      const newTrip = { ...defaultTrip(), ...parsed };
+      newTrip.id = newId();
+      if (!newTrip.icon) newTrip.icon = '🏰';
+      if (typeof newTrip.photo !== 'string') newTrip.photo = '';
+      // 日付がなければ expenses から自動推定
+      if (!newTrip.startDate && newTrip.expenses?.length) {
+        const dates = newTrip.expenses.map(e => e.date).filter(Boolean).sort();
+        if (dates.length) { newTrip.startDate = dates[0]; newTrip.endDate = dates[dates.length-1]; }
       }
-    } else {
-      if (!confirm('現在のデータを上書きしますか?')) return;
+      newTrip.categories.forEach(c => { if (typeof c.plannedBudget !== 'number') c.plannedBudget = 0; });
+      store.trips.push(newTrip);
+      store.activeTripId = newTrip.id;
+      data = activeTrip();
+      closeModal('shareModal');
+      save();
+      toast('新しい旅行として追加しました');
+      return;
     }
+    // store全体 (trips配列を含む) の場合は確認の上で上書き
+    if (!confirm('全ての旅行データを上書きしますか? (現在のデータは消えます)')) return;
     store = migrate(parsed);
     data = activeTrip();
     closeModal('shareModal');
