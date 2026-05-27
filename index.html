@@ -907,19 +907,38 @@ function initSortables() {
       }
     });
   }
-  // 支出の並び替え（日付ごと）
+  // 支出の並び替え（日付ごと、日付グループ間の移動も可能）
   document.querySelectorAll('#expenses .day-items').forEach(box => {
     if (box._sortable) return;
     box._sortable = Sortable.create(box, {
       animation: 150,
       delay: 200, delayOnTouchOnly: true, touchStartThreshold: 5,
       filter: '.del',
-      onEnd: () => {
-        const ids = [...box.querySelectorAll('[data-exp]')].map(el => el.dataset.exp);
-        ids.forEach((id, i) => {
+      group: 'expenses',  // 日付グループ間で移動可能に
+      onEnd: (evt) => {
+        const movedId = evt.item.dataset.exp;
+        const toBox = evt.to;
+        const fromBox = evt.from;
+        const targetDate = toBox.dataset.day || '';
+        // 移動先の日付に支出の日付を更新
+        const movedExp = data.expenses.find(x => x.id === movedId);
+        if (movedExp && targetDate && movedExp.date !== targetDate) {
+          movedExp.date = targetDate;
+        }
+        // 移動先コンテナの新しい順序を反映
+        const toIds = [...toBox.querySelectorAll('[data-exp]')].map(el => el.dataset.exp);
+        toIds.forEach((id, i) => {
           const e = data.expenses.find(x => x.id === id);
           if (e) e.order = i;
         });
+        // 移動元コンテナ (異なる場合) の順序も更新
+        if (fromBox !== toBox) {
+          const fromIds = [...fromBox.querySelectorAll('[data-exp]')].map(el => el.dataset.exp);
+          fromIds.forEach((id, i) => {
+            const e = data.expenses.find(x => x.id === id);
+            if (e) e.order = i;
+          });
+        }
         save();
       }
     });
