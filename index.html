@@ -329,6 +329,7 @@
     <div class="field"><label>カテゴリー</label><select id="expCategory"></select></div>
     <div class="field"><label>メモ (任意)</label><input type="text" id="expNote" /></div>
     <div class="actions">
+      <button class="btn danger" id="expDelete" style="display:none;">削除</button>
       <button class="btn ghost" id="expDuplicate" style="display:none; flex:0 0 auto; padding:13px 18px;">🗐 複製</button>
       <button class="btn ghost" data-close>キャンセル</button>
       <button class="btn primary" id="expSave">保存</button>
@@ -773,7 +774,7 @@ function render() {
             <div class="s">${sub}</div>
           </div>
           <div class="amt">${fmt(e.amount)}</div>
-          <button class="del" data-del-exp="${e.id}">×</button>
+          <button class="del" data-dup-exp="${e.id}" title="複製">🗐</button>
         </div>`;
     };
     if (groupByDate) {
@@ -797,15 +798,19 @@ function render() {
       expEl.innerHTML = sorted.map(rowHtml).join('');
     }
     expEl.querySelectorAll('[data-exp]').forEach(r => {
-      r.onclick = (ev) => { if (ev.target.closest('[data-del-exp]')) return; openExpenseModal(r.dataset.exp); };
+      r.onclick = (ev) => { if (ev.target.closest('[data-dup-exp]')) return; openExpenseModal(r.dataset.exp); };
     });
-    expEl.querySelectorAll('[data-del-exp]').forEach(b => {
+    expEl.querySelectorAll('[data-dup-exp]').forEach(b => {
       b.onclick = (ev) => {
         ev.stopPropagation();
-        if (confirm('この支出を削除しますか?')) {
-          data.expenses = data.expenses.filter(x => x.id !== b.dataset.delExp);
-          save();
-        }
+        const src = data.expenses.find(x => x.id === b.dataset.dupExp);
+        if (!src) return;
+        const dup = { ...src, id: newId(), createdAt: Date.now() };
+        // 元のすぐ後に並ぶように order を調整
+        if (typeof src.order === 'number') dup.order = src.order + 0.5;
+        data.expenses.push(dup);
+        save();
+        toast('複製しました');
       };
     });
   }
@@ -957,6 +962,7 @@ function openExpenseModal(expId, presetCat) {
   const exp = expId ? data.expenses.find(e => e.id === expId) : null;
   document.getElementById('expenseTitle').textContent = exp ? '支出を編集' : '支出を追加';
   document.getElementById('expDuplicate').style.display = exp ? 'block' : 'none';
+  document.getElementById('expDelete').style.display = exp ? 'block' : 'none';
   document.getElementById('expName').value = exp?.name || '';
   document.getElementById('expAmount').value = exp?.amount || '';
   document.getElementById('expAmountCalc').textContent = '';
@@ -1009,6 +1015,13 @@ function evalAmount(s) {
   inp.addEventListener('input', update);
   inp.addEventListener('focus', update);
 })();
+document.getElementById('expDelete').onclick = () => {
+  if (!state.editingExpense) return;
+  if (!confirm('この支出を削除しますか?')) return;
+  data.expenses = data.expenses.filter(x => x.id !== state.editingExpense);
+  closeModal('expenseModal');
+  save();
+};
 document.getElementById('expDuplicate').onclick = () => {
   if (!state.editingExpense) return;
   const src = data.expenses.find(x => x.id === state.editingExpense);
