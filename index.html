@@ -329,6 +329,7 @@
     <div class="field"><label>カテゴリー</label><select id="expCategory"></select></div>
     <div class="field"><label>メモ (任意)</label><input type="text" id="expNote" /></div>
     <div class="actions">
+      <button class="btn ghost" id="expDuplicate" style="display:none; flex:0 0 auto; padding:13px 18px;">🗐 複製</button>
       <button class="btn ghost" data-close>キャンセル</button>
       <button class="btn primary" id="expSave">保存</button>
     </div>
@@ -936,6 +937,7 @@ function openExpenseModal(expId, presetCat) {
   state.editingExpense = expId;
   const exp = expId ? data.expenses.find(e => e.id === expId) : null;
   document.getElementById('expenseTitle').textContent = exp ? '支出を編集' : '支出を追加';
+  document.getElementById('expDuplicate').style.display = exp ? 'block' : 'none';
   document.getElementById('expName').value = exp?.name || '';
   document.getElementById('expAmount').value = exp?.amount || '';
   document.getElementById('expAmountCalc').textContent = '';
@@ -988,6 +990,27 @@ function evalAmount(s) {
   inp.addEventListener('input', update);
   inp.addEventListener('focus', update);
 })();
+document.getElementById('expDuplicate').onclick = () => {
+  if (!state.editingExpense) return;
+  const src = data.expenses.find(x => x.id === state.editingExpense);
+  if (!src) return;
+  // 現在のフォーム値を新しい支出として保存
+  const name = document.getElementById('expName').value.trim();
+  const amountRaw = document.getElementById('expAmount').value;
+  const amountEval = evalAmount(amountRaw);
+  if (isNaN(amountEval)) { toast('金額の式が正しくありません'); return; }
+  const amount = Math.round(amountEval) || 0;
+  const date = document.getElementById('expDate').value;
+  const categoryId = document.getElementById('expCategory').value;
+  const note = document.getElementById('expNote').value.trim();
+  if (!name || !amount) { toast('内容と金額を入力してください'); return; }
+  const dup = { id: newId(), name, amount, date, categoryId, note, createdAt: Date.now() };
+  data.expenses.push(dup);
+  state.editingExpense = dup.id;
+  document.getElementById('expenseTitle').textContent = '支出を編集';
+  toast('複製しました');
+  save();
+};
 document.getElementById('expSave').onclick = () => {
   const name = document.getElementById('expName').value.trim();
   const amountRaw = document.getElementById('expAmount').value;
