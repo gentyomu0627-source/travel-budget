@@ -263,6 +263,7 @@
   </header>
   <div id="tripList"></div>
   <button class="add-trip-btn" id="btnAddTrip" style="width:100%; padding:14px; margin-top:8px; background:var(--primary); color:#fff; border:none; border-radius:14px; font-weight:700; font-size:15px; cursor:pointer; font-family:inherit;">+ 新しい旅行を追加</button>
+  <div id="appVersion" style="text-align:center; font-size:11px; color:var(--muted); margin-top:18px;"></div>
 </div>
 
 <!-- 旅行詳細 -->
@@ -548,6 +549,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
+const APP_VERSION = 'v2.1';
 const DEFAULT_EMOJIS = ['✈️','🏨','🍱','🚗','🎫','🛍️','☕','🍺','🚆','🚕','🛳️','🎢','📷','💊','🎁','💳','🏖️','⛩️','🗺️','🎒','💴','📱','🍜','🍣'];
 const COLORS = ['#4a7dff','#22c55e','#f59e0b','#ef4444','#a855f7','#ec4899','#06b6d4','#f97316'];
 
@@ -1233,10 +1235,24 @@ document.getElementById('importFile').onchange = (e) => {
   r.readAsText(f);
 };
 document.getElementById('importSave').onclick = () => {
-  const txt = document.getElementById('importText').value.trim();
+  // 前後の余計な文字 (BOM・ゼロ幅スペース等) を除去
+  const txt = document.getElementById('importText').value.replace(/^[\s﻿​]+|[\s﻿​]+$/g, '');
   if (!txt) { toast('データが空です'); return; }
+  let parsed;
   try {
-    const parsed = JSON.parse(txt);
+    parsed = JSON.parse(txt);
+  } catch {
+    // JSONとして読めない → 原因を具体的に伝える
+    if (txt.startsWith('{') && !txt.endsWith('}')) {
+      alert('データが途中で切れているようです。\n\nLINEなどでは長いメッセージが省略されることがあります。「ファイルとして保存」→ファイルを送る方法をお試しください。');
+    } else if (!txt.startsWith('{')) {
+      alert('データの先頭が正しくありません。\n\nコピーしたデータ全体 ({ から } まで) を貼り付けてください。');
+    } else {
+      alert('データの形式が読み取れませんでした。\n\nもう一度「データをコピー」からやり直してください。');
+    }
+    return;
+  }
+  try {
     // 単一旅行データ (categoriesとexpensesを持つ) → 新規追加か上書きか選択
     const isSingleTrip = parsed && Array.isArray(parsed.categories) && Array.isArray(parsed.expenses) && !Array.isArray(parsed.trips);
     if (isSingleTrip) {
@@ -1260,13 +1276,18 @@ document.getElementById('importSave').onclick = () => {
       return;
     }
     // store全体 (trips配列を含む) の場合は確認の上で上書き
+    if (!parsed || !Array.isArray(parsed.trips)) {
+      alert('旅行データの形式ではないようです。\n\n共有画面の「データをコピー」でコピーしたものを貼り付けてください。');
+      return;
+    }
     if (!confirm('全ての旅行データを上書きしますか? (現在のデータは消えます)')) return;
     store = migrate(parsed);
     data = activeTrip();
     closeModal('shareModal');
+    view = 'home';
     save();
     toast('データを読み込みました');
-  } catch { toast('データの読み込みに失敗しました'); }
+  } catch (e) { console.error(e); alert('読み込み中にエラーが発生しました: ' + e.message); }
 };
 
 function toast(msg) {
@@ -1444,6 +1465,7 @@ document.getElementById('tripModalDelete').onclick = () => {
 // 初期ビュー: 常に旅行プラン一覧 (ホーム) を表示
 view = 'home';
 data = activeTrip();
+document.getElementById('appVersion').textContent = APP_VERSION;
 render();
 
 /* ============ Firebase リアルタイム同期 ============ */
