@@ -445,10 +445,10 @@
           <div id="syncStatus" style="font-size:12px; color:var(--muted);">接続中...</div>
         </div>
         <p style="font-size:12px; color:var(--muted); margin:0 0 12px; line-height:1.6; text-align:center;">
-          家族にこのコードを伝えて「既存ルームに参加」から入力してもらうと、リアルタイムで同期されます。
+          「招待リンクをコピー」して家族にLINE等で送るだけ。<br>家族はリンクを開けば自動で同期に参加できます。
         </p>
         <div class="actions">
-          <button class="btn ghost" id="copyRoomCode">📋 コピー</button>
+          <button class="btn ghost" id="copyRoomCode">🔗 招待リンクをコピー</button>
           <button class="btn ghost" id="showRoomQR">📱 QR表示</button>
         </div>
         <details style="margin-top:14px; background:var(--bg); border-radius:10px; padding:10px 12px;">
@@ -1611,15 +1611,24 @@ document.getElementById('fbConnect').onclick = async () => {
   toast('接続しました。ルームコード: ' + code);
 };
 
+// 招待リンク: ルームコード + Firebase設定を埋め込む (家族は開くだけで参加できる)
+function buildInviteUrl() {
+  if (!fb.roomCode || !fb.config) return '';
+  const cfg = btoa(unescape(encodeURIComponent(JSON.stringify(fb.config))));
+  return location.origin + location.pathname + '?room=' + encodeURIComponent(fb.roomCode) + '&cfg=' + encodeURIComponent(cfg);
+}
+
 document.getElementById('copyRoomCode').onclick = async () => {
   if (!fb.roomCode) return;
-  if (await copyText(fb.roomCode)) toast('コードをコピーしました');
-  else showCopyFallback(fb.roomCode, 'ルームコード');
+  const url = buildInviteUrl();
+  if (!url) { toast('先に接続してください'); return; }
+  if (await copyText(url)) toast('招待リンクをコピーしました。家族に送ってください');
+  else showCopyFallback(url, '招待リンク');
 };
 
 document.getElementById('showRoomQR').onclick = () => {
   if (!fb.roomCode) return;
-  const url = location.origin + location.pathname + '?room=' + encodeURIComponent(fb.roomCode);
+  const url = buildInviteUrl();
   const c = document.getElementById('qrContainer');
   c.innerHTML = '';
   const img = document.createElement('img');
@@ -1650,13 +1659,27 @@ document.getElementById('syncDisconnect').onclick = () => {
   // Handle ?room= URL param (join via QR/link)
   const params = new URLSearchParams(location.search);
   const roomParam = params.get('room');
-  if (roomParam && fb.config) {
+  const cfgParam = params.get('cfg');
+  if (roomParam) {
     history.replaceState(null, '', location.pathname);
-    if (confirm('ルーム "' + roomParam + '" に参加しますか?')) {
-      await fbConnectRoom(roomParam, { mergeFromRemote: true });
+    // 招待リンクにFirebase設定が含まれていれば自動で取り込む
+    if (cfgParam && !fb.config) {
+      try {
+        const cfg = JSON.parse(decodeURIComponent(escape(atob(cfgParam))));
+        if (cfg && cfg.projectId && cfg.apiKey) {
+          fb.config = cfg;
+          localStorage.setItem('tb_fbConfig', JSON.stringify(cfg));
+        }
+      } catch (e) { console.warn('cfg parse failed', e); }
     }
-  } else if (roomParam && !fb.config) {
-    toast('先にFirebase設定が必要です');
+    if (fb.config) {
+      if (confirm('家族の旅行プラン (ルーム "' + roomParam + '") に参加しますか?')) {
+        await fbConnectRoom(roomParam, { mergeFromRemote: true });
+        toast('参加しました。データが同期されます');
+      }
+    } else {
+      toast('招待リンクが古い形式です。新しいリンクを送ってもらってください');
+    }
   }
 })();
 
